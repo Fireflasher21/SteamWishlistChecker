@@ -2,8 +2,16 @@
 This project is not affiliated with Steam or any other connected Source.
 This project is also not an official Software from Steam.
 
-# SteamWishlistChecker
+-This Discord Bot cant be added to Guilds/Servers 
 
+# SteamWishlistChecker
+This Discord Bot uses the Steam Web API to check for the stated SteamID's related Account Wishlist and sends notification via direct Messages when a game or app on said wishlist has the highest discount since start of this service.
+
+I build this since SteamDB does not have an API and wanted to save some time on checking games prices.
+
+### Usage
+- Once u authorised the Bot to your Account and stated your SteamID with the /setsteam command, the bot will check your Wishlist daily to not miss any discount and message you, when it drops below or equal the last saved amount since starting of this service.
+- Since Users can have the same games in their wishlist, some games may even already have entries. 
 
 ## Privacy Policy
 

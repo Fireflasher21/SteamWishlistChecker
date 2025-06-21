@@ -57,4 +57,4 @@ nunit-*.xml
 #Enviromentfiles
 .env
 *.env
-
+appsettings.json

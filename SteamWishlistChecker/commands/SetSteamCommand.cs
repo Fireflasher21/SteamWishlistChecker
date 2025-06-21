@@ -30,42 +30,48 @@ namespace commands
             {
                 await _client.CreateGlobalApplicationCommandAsync(command.Build());
             }
+
         }
 
         public void HookHandler()
         {
             _client.SlashCommandExecuted += async (SocketSlashCommand command) =>
             {
-                await command.DeferAsync(ephemeral: true);
-
-                var steamid = Int64.Parse(command.Data.Options.First().Value.ToString()!);
-                var discordUserId = command.User.Id;
-                var steamid_indb = await DatabaseHandling.GetSteamIDByDiscordID(discordUserId);
-                if (steamid_indb == steamid)
+                try
                 {
-                    await command.FollowupAsync("❌ Diese SteamID ist bereits hinterlegt");
-                    return;
+                    Int64 steamid = Int64.Parse(command.Data.Options.First().Value.ToString()!);
+                    var discordUserId = command.User.Id;
+                    var steamid_indb = await DatabaseHandling.GetSteamIDByDiscordID(discordUserId);
+                    if (steamid_indb == steamid)
+                    {
+                        await command.RespondAsync("❌ Diese SteamID ist bereits hinterlegt");
+                        return;
+                    }
+
+                    await command.DeferAsync(ephemeral: true);
+                    var isValid = await SteamAPI.IsSteamIDValid(steamid);
+                    string message = "";
+                    switch (isValid)
+                    {
+                        case -1:
+                            message = "❌ Diese SteamID ist ungültig";
+                            break;
+                        case -2:
+                            message = "❌ Die Wunschliste ist privat";
+                            break;
+                        case 1:
+                            message = "✅ Deine SteamID wurde erfolgreich gespeichert.";
+                            await DatabaseHandling.AddUser(steamid, discordUserId);
+                            Console.WriteLine("Steam ID " + steamid + " wurde für " + command.User.GlobalName + " gespeichert");
+                            break;
+                    }
+                    await command.FollowupAsync(message);
+
                 }
-
-
-                var isValid = await SteamAPI.IsSteamIDValid(steamid);
-                string message = "";
-                switch (isValid)
+                catch (Exception ex)
                 {
-                    case -1:
-                        message = "❌ Diese SteamID ist ungültig";
-                        break;
-                    case -2:
-                        message = "❌ Die Wunschliste ist privat";
-                        break;
-                    case 1:
-                        message = "✅ Deine SteamID wurde erfolgreich gespeichert.";
-                        await DatabaseHandling.AddUser(steamid, discordUserId);
-                        Console.WriteLine("Steam ID " + steamid + " wurde für " + command.User.GlobalName + " gespeichert");
-                        break;
+                    Console.WriteLine(ex.StackTrace);
                 }
-                await command.FollowupAsync(message);
-
             };
 
         }

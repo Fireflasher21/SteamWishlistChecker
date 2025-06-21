@@ -1,5 +1,5 @@
 using db;
-using DotNetEnv;
+using Microsoft.Extensions.Configuration;
 using main;
 using Newtonsoft.Json.Linq;
 
@@ -13,12 +13,12 @@ namespace api
 
         //<AppID, AppInfoBody>
         public static readonly Dictionary<Int32, AppBody> AppBodyCache = new();
- 
 
-        private static readonly string STEAM_API_KEY = Env.GetString("STEAM_API_KEY");
+
+        private static readonly string STEAM_API_KEY = SteamWishlistChecker.Configs.GetSection("Steam").Get<models.SteamConfig>()!.STEAM_API_KEY;
         private static readonly string API_APP_URL = "https://store.steampowered.com/api/appdetails?appids={0}&cc=de&l=de";
-        private static readonly string API_WISHL_URL = "https://api.steampowered.com/IWishlistService/GetWishlist/v1?key="+STEAM_API_KEY+"&steamid={0}";
-        private static readonly string API_STEAM_ID = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key="+STEAM_API_KEY+"&steamids={0}";
+        private static readonly string API_WISHL_URL = "https://api.steampowered.com/IWishlistService/GetWishlist/v1?key=" + STEAM_API_KEY + "&steamid={0}";
+        private static readonly string API_STEAM_ID = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + STEAM_API_KEY + "&steamids={0}";
         public static async Task LoadWishlistOfSteamIDs(HashSet<Int64> steamIDs)
         {
             Console.WriteLine("Starte Wunschlisten update");
@@ -42,7 +42,7 @@ namespace api
                     if (appIds is not null)
                     {
                         //First add all AppIDs to our Dictionary
-                        foreach(Int32 appid in appIds) AppID_List.Add(appid,new());
+                        foreach (Int32 appid in appIds) AppID_List.Add(appid, new());
                         //Get DB user_ID from list
                         Int16 user_ID = DatabaseHandling.discord_steam_id_List
                                                                     .Where(k => k.Value.Item1 == steamid)
@@ -122,6 +122,7 @@ namespace api
             public string name { get; private set; }
             public Int16 price { get; private set; }
             public Int16 discount { get; private set; }
+            public bool alreadyReduced { get; private set; }
 
             public AppBody(Int32 appid, string name, Int16 price, Int16 discount)
             {
@@ -129,7 +130,23 @@ namespace api
                 this.name = name;
                 this.price = price;
                 this.discount = discount;
+                alreadyReduced = false;
+            }
+
+            public void SetAlreadyReduced(bool isAlreadyReduced)
+            {
+                alreadyReduced = isAlreadyReduced;
             }
         }
     }
+    
+    namespace models
+    {
+        public class SteamConfig
+        {
+            public string STEAM_API_KEY { get; private set; } = "";
+        }
+    }
+        
 }
+

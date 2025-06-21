@@ -9,7 +9,7 @@ namespace db
     {
         //<user_ID,(SteamID,Discord_ID)
         public static readonly Dictionary<Int16, (Int64, ulong)> discord_steam_id_List = new();
-
+        public static readonly HashSet<Int16> newlyAddedUsers = new();
         private static string _dbPath = "Data Source=steam_tracker.db";
 
 
@@ -88,6 +88,7 @@ namespace db
             await conn.CloseAsync();
 
             discord_steam_id_List.Add(user_ID, (steamid, discordid));
+            newlyAddedUsers.Add(user_ID);
         }
 
         public static async Task<Int64> GetSteamIDByDiscordID(ulong discordid)
@@ -157,7 +158,7 @@ namespace db
                     //insert into return Dictionary
                     maxReducedGames.Add(appid, new(appid, name, price, discount));
                 }
-                else if (price < storedPrice)
+                else if (price <= storedPrice)
                 {
                     var updateCmd = conn.CreateCommand();
                     updateCmd.CommandText = @"UPDATE TrackedApps SET LowestPrice = $price, MaxDiscountPercent = $discount, Timestamp = $timestamp WHERE App_ID = $aid";
@@ -169,18 +170,20 @@ namespace db
 
                     //insert into return Dictionary
                     maxReducedGames.Add(appid, new(appid, name, price, discount));
-                }
-                else if (price == storedPrice)
-                {
-                    //to avoid spamming when price is the same as already stored, we check if the sale has ended
-                    // == 0 (same day) we skip
-                    // > 0 (in future) sale is ongoing, we skip
-                    // < 0 (passed) new sale, send message
-                    var sale_end = DateOnly.ParseExact(storedTimestamp.ToString(), "yyyyMMdd").AddDays(21);
-                    if (sale_end.CompareTo(timestamp) < 0)
+
+
+                    if (price == storedPrice)
                     {
-                        //insert into return Dictionary
-                        maxReducedGames.Add(appid, new(appid, name, price, discount));
+                        //to avoid spamming when price is the same as already stored, we check if the sale has ended
+                        // == 0 (same day) set bool
+                        // > 0 (in future) sale is ongoing, set bool
+                        // < 0 (passed) new sale, skip
+                        var sale_end = DateOnly.ParseExact(storedTimestamp.ToString(), "yyyyMMdd").AddDays(21);
+                        if (sale_end.CompareTo(timestamp) >= 0)
+                        {
+                            //insert into return Dictionary
+                            maxReducedGames[appid].SetAlreadyReduced(true);
+                        }
                     }
                 }
             }

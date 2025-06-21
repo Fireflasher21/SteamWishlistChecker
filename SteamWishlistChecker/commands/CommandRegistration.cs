@@ -1,4 +1,5 @@
 using Discord.WebSocket;
+using SQLitePCL;
 
 namespace commands
 {

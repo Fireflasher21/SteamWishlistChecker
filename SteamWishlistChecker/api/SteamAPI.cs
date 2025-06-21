@@ -2,6 +2,7 @@ using db;
 using Microsoft.Extensions.Configuration;
 using main;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 namespace api
 {
@@ -19,9 +20,11 @@ namespace api
         private static readonly string API_APP_URL = "https://store.steampowered.com/api/appdetails?appids={0}&cc=de&l=de";
         private static readonly string API_WISHL_URL = "https://api.steampowered.com/IWishlistService/GetWishlist/v1?key=" + STEAM_API_KEY + "&steamid={0}";
         private static readonly string API_STEAM_ID = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + STEAM_API_KEY + "&steamids={0}";
+        private static readonly string steamID64Pattern = @"^7656119[0-9]{10}$";
+
         public static async Task LoadWishlistOfSteamIDs(HashSet<Int64> steamIDs)
         {
-            Console.WriteLine("Starte Wunschlisten update");
+            Console.WriteLine("Starte Wunschlisten update um: " + DateTime.Now.ToString("dd-MM-yyyy HH:MM"));
             try
             {
                 var httpClient = new HttpClient();
@@ -102,6 +105,7 @@ namespace api
         /// <returns>1 when valid and public Wishlist, -1 when invalid steamid, -2 when privat wishlist</returns>
         public static async Task<int> IsSteamIDValid(Int64 steamid)
         {
+            if (!Regex.IsMatch(steamid.ToString(),steamID64Pattern)) return -1;
             var httpClient = new HttpClient();
             string url = string.Format(API_STEAM_ID, steamid);
 
@@ -144,7 +148,7 @@ namespace api
     {
         public class SteamConfig
         {
-            public string STEAM_API_KEY { get; private set; } = "";
+            public string STEAM_API_KEY { get; set; } = "";
         }
     }
         

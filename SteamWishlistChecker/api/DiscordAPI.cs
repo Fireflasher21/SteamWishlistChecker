@@ -43,18 +43,6 @@ namespace api
         }
     }
 
-    namespace models
-    {
-        public class DiscordConfig
-        {
-            public string BotToken { get; set; } = "";
-            public string ClientId { get; set; } = "";
-            public string ClientSecret { get; set; } = "";
-            public string RedirectUri { get; set; } = "";
-            public string StartingMessage { get; set; } = "";
-        }
-    }
-
     public class OAuthenticator
     {
 
@@ -90,7 +78,7 @@ namespace api
 
                     if (ulong.TryParse(userId, out var discordUserId))
                     {
-                        await DiscordAPI.MessageDiscordUser(SteamWishlistChecker.steamWishlistChecker._client,discordUserId,_config.StartingMessage);
+                        await DiscordAPI.MessageDiscordUser(SteamWishlistChecker.steamWishlistChecker._client, discordUserId, _config.StartingMessage);
                         await using var writer = new StreamWriter(response.OutputStream);
                         await writer.WriteAsync("Falls du keine Direktnachricht von dem Bot bekommst, wende dich bitte an die Person welche dir den Link geschickt hat");
                     }
@@ -127,9 +115,20 @@ namespace api
 
             var obj = System.Text.Json.JsonDocument.Parse(response);
             return obj.RootElement.GetProperty("id").GetString();
-}
+        }
 
-
+    }
+        
+    namespace models
+    {
+        public class DiscordConfig
+        {
+            public string BotToken { get; set; } = "";
+            public string ClientId { get; set; } = "";
+            public string ClientSecret { get; set; } = "";
+            public string RedirectUri { get; set; } = "";
+            public string StartingMessage { get; set; } = "";
+        }
     }
 
 }

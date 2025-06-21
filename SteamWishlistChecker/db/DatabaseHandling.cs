@@ -10,11 +10,13 @@ namespace db
         //<user_ID,(SteamID,Discord_ID)
         public static readonly Dictionary<Int16, (Int64, ulong)> discord_steam_id_List = new();
         public static readonly HashSet<Int16> newlyAddedUsers = new();
-        private static string _dbPath = "Data Source=steam_tracker.db";
+        private static string _dbPath_Folder = Path.Combine(AppContext.BaseDirectory, "database_do_not_delete");
+        private static string _dbPath = $"Data Source={Path.Combine(_dbPath_Folder,"steam_tracker.db")}";
 
 
         public static async Task InitDatabase()
         {
+            Directory.CreateDirectory(_dbPath_Folder);
             using var conn = new SqliteConnection(_dbPath);
             await conn.OpenAsync();
 
@@ -99,7 +101,6 @@ namespace db
             var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT Steam_ID FROM Users WHERE User_ID = (SELECT User_ID FROM Users WHERE Discord_Id = $did)";
             cmd.Parameters.AddWithValue("$did", discordid);
-
             object? result = await cmd.ExecuteScalarAsync();
             await conn.CloseAsync();
 

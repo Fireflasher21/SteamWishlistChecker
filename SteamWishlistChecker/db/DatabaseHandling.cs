@@ -3,15 +3,19 @@ using api;
 using Discord.Rest;
 using Microsoft.Data.Sqlite;
 
+using UserID = System.Int16;
+using AppID = System.Int32;
+using SteamID = System.Int64;
+
 namespace db
 {
     public static class DatabaseHandling
     {
         //<user_ID,(SteamID,Discord_ID)
-        public static readonly Dictionary<Int16, (Int64, ulong)> discord_steam_id_List = new();
-        public static readonly HashSet<Int16> newlyAddedUsers = new();
+        public static readonly Dictionary<UserID, (SteamID, ulong)> discord_steam_id_List = new();
+        public static readonly HashSet<UserID> newlyAddedUsers = new();
         private static string _dbPath_Folder = Path.Combine(AppContext.BaseDirectory, "database_do_not_delete");
-        private static string _dbPath = $"Data Source={Path.Combine(_dbPath_Folder,"steam_tracker.db")}";
+        private static string _dbPath = $"Data Source={Path.Combine(_dbPath_Folder, "steam_tracker.db")}";
 
 
         public static async Task InitDatabase()
@@ -58,8 +62,8 @@ namespace db
             cmd.CommandText = "SELECT * FROM Users";
             var reader = await cmd.ExecuteReaderAsync();
 
-            Int16 user_id = -1;
-            Int64 steamid = -1;
+            UserID user_id = -1;
+            SteamID steamid = -1;
             ulong discordid = 0;
 
             while (await reader.ReadAsync() == true)
@@ -73,7 +77,7 @@ namespace db
             await conn.CloseAsync();
         }
 
-        public static async Task AddUser(Int64 steamid, ulong discordid)
+        public static async Task AddUser(SteamID steamid, ulong discordid)
         {
             using var conn = new SqliteConnection(_dbPath);
             await conn.OpenAsync();
@@ -93,7 +97,7 @@ namespace db
             newlyAddedUsers.Add(user_ID);
         }
 
-        public static async Task<Int64> GetSteamIDByDiscordID(ulong discordid)
+        public static async Task<SteamID> GetSteamIDByDiscordID(ulong discordid)
         {
             using var conn = new SqliteConnection(_dbPath);
             await conn.OpenAsync();
@@ -109,15 +113,15 @@ namespace db
             return Int64.Parse(result.ToString()!);
         }
 
-        public static async Task<Dictionary<Int32, SteamAPI.AppBody>> AddGamesToDB(Dictionary<Int32, SteamAPI.AppBody> reducedGames)
+        public static async Task<Dictionary<AppID, SteamAPI.AppBody>> AddGamesToDB(Dictionary<AppID, SteamAPI.AppBody> reducedGames)
         {
             if (reducedGames.Count <= 0) return reducedGames;
 
             using var conn = new SqliteConnection(_dbPath);
             await conn.OpenAsync();
 
-            Dictionary<Int32, SteamAPI.AppBody> maxReducedGames = new();
-            foreach (Int32 appid in reducedGames.Keys)
+            Dictionary<AppID, SteamAPI.AppBody> maxReducedGames = new();
+            foreach (AppID appid in reducedGames.Keys)
             {
                 // Get App_ID if exists
                 var selectAppIdCmd = conn.CreateCommand();

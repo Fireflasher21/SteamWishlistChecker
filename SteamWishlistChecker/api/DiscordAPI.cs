@@ -1,32 +1,53 @@
 using System.Net;
-using api.models;
+using commands;
 using Discord;
 using Discord.WebSocket;
-using main;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json.Linq;
 using DiscordConfig = api.models.DiscordConfig;
 
 namespace api
 {
     public class DiscordAPI
     {
-        public static async Task MessageDiscordUser(DiscordSocketClient client, ulong discordid, HashSet<SteamAPI.AppBody> appBodies)
+        private DiscordSocketClient _client;
+        
+        private OAuthenticator _oAuthenticator;
+
+        private DiscordConfig _config;
+
+        private CommandRegistration _commands;
+
+        public DiscordAPI(DiscordConfig config)
         {
-            var discordUser = await client.Rest.GetUserAsync(discordid);
+            _config = config;
+            _oAuthenticator = new(config);
+            _client = new DiscordSocketClient();
+            _commands = new CommandRegistration(_client);
+            _commands.Initialize();
+        }
+
+        public async Task Start()
+        {
+            await _client.LoginAsync(TokenType.Bot, _config.BotToken);
+            await _client.StartAsync();
+            _oAuthenticator.StartOAuthListener(this);
+        }
+
+        public async Task MessageDiscordUser(ulong discordid, HashSet<SteamAPI.AppBody> appBodies)
+        {
+            var discordUser = await _client.Rest.GetUserAsync(discordid);
             var dmChannel = await discordUser.CreateDMChannelAsync();
             foreach (SteamAPI.AppBody body in appBodies)
             {
-                await dmChannel.SendMessageAsync($"📉 **{body.name}** hat einen Tiefpreis: **{body.price / 100.0:F2}€** (-{body.discount}%)!\nhttps://store.steampowered.com/app/{body.appid}/");
+                await dmChannel.SendMessageAsync($"📉 **{body.name}** hat einen Tiefpreis: **{body.price / 100.0:F2}€** (-{body.discount}%)!\nhttps://store.steampowered.com/app/{body.appID}/");
                 Console.WriteLine("User " + discordUser.GlobalName + " wurde benachrichtigt für " + body.name);
             }
         }
 
-        public static async Task MessageDiscordUser(DiscordSocketClient client, ulong discordid, string messages)
+        public async Task MessageDiscordUser(ulong discordid, string messages)
         {
             try
             {
-                var user = await client.Rest.GetUserAsync(discordid);
+                var user = await _client.Rest.GetUserAsync(discordid);
                 if (user == null)
                 {
                     Console.WriteLine($"❌ Could not fetch user {discordid}");
@@ -45,11 +66,15 @@ namespace api
 
     public class OAuthenticator
     {
+        private DiscordConfig _config;
 
-        private static DiscordConfig _config { get; set; }
-        public void StartOAuthListener()
+        public OAuthenticator(DiscordConfig config)
         {
-            _config = SteamWishlistChecker.Configs.GetSection("Discord").Get<DiscordConfig>();
+            _config = config;
+        }
+
+        public void StartOAuthListener(DiscordAPI api)
+        {
             Task.Run(async () =>
             {
                 HttpListener listener = new HttpListener();
@@ -63,7 +88,7 @@ namespace api
                     var request = context.Request;
                     var response = context.Response;
 
-                    string code = request.QueryString["code"];
+                    string? code = request.QueryString["code"];
                     if (string.IsNullOrEmpty(code))
                     {
                         response.StatusCode = 400;
@@ -78,7 +103,7 @@ namespace api
 
                     if (ulong.TryParse(userId, out var discordUserId))
                     {
-                        await DiscordAPI.MessageDiscordUser(SteamWishlistChecker.steamWishlistChecker._client, discordUserId, _config.StartingMessage);
+                        await api.MessageDiscordUser(discordUserId, _config.StartingMessage);
                         await using var writer = new StreamWriter(response.OutputStream);
                         await writer.WriteAsync("Falls du keine Direktnachricht von dem Bot bekommst, wende dich bitte an die Person welche dir den Link geschickt hat");
                     }
@@ -104,7 +129,7 @@ namespace api
             var json = await response.Content.ReadAsStringAsync();
 
             var obj = System.Text.Json.JsonDocument.Parse(json);
-            return obj.RootElement.GetProperty("access_token").GetString();
+            return obj.RootElement.GetProperty("access_token").GetString()!;
         }
 
         private async Task<string> GetUserIdFromToken(string accessToken)
@@ -114,7 +139,7 @@ namespace api
             var response = await client.GetStringAsync("https://discord.com/api/users/@me");
 
             var obj = System.Text.Json.JsonDocument.Parse(response);
-            return obj.RootElement.GetProperty("id").GetString();
+            return obj.RootElement.GetProperty("id").GetString()!;
         }
 
     }

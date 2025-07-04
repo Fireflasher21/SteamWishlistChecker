@@ -47,6 +47,7 @@ namespace main
         private static async Task DoUpdate()
         {
             HashSet<SteamID> steamIDs = DatabaseHandling.discord_steam_id_List.Select(k => k.Value.Item1).ToHashSet();
+
             if (await _steamAPI.LoadWishlistOfSteamIDs(steamIDs))
             {
                 await CheckGamePrices();

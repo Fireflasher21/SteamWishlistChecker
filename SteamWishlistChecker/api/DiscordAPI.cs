@@ -1,4 +1,6 @@
+using System.Formats.Asn1;
 using System.Net;
+using System.Runtime.InteropServices;
 using commands;
 using Discord;
 using Discord.WebSocket;
@@ -78,37 +80,57 @@ namespace api
             Task.Run(async () =>
             {
                 HttpListener listener = new HttpListener();
-                listener.Prefixes.Add(_config.RedirectUri);
-                listener.Start();
-                Console.WriteLine("OAuth listener started on " + _config.RedirectUri);
-
+                try
+                {
+                    listener.Prefixes.Add(_config.RedirectUri);
+                    listener.Start();
+                    Console.WriteLine("OAuth listener started on " + _config.RedirectUri);
+                }
+                catch (HttpListenerException e)
+                {
+                    Console.WriteLine("Could not start OAuthenticator. Reason:\n" + e.Message);
+                }
                 while (true)
                 {
-                    HttpListenerContext context = await listener.GetContextAsync();
-                    var request = context.Request;
-                    var response = context.Response;
-
-                    string? code = request.QueryString["code"];
-                    if (string.IsNullOrEmpty(code))
+                    try
                     {
-                        response.StatusCode = 400;
+                        HttpListenerContext context = await listener.GetContextAsync();
+                        var request = context.Request;
+                        var response = context.Response;
+
+                        if (_config.DevMode) Console.WriteLine("Request was: " + request.InputStream);
                         await using var writer = new StreamWriter(response.OutputStream);
-                        await writer.WriteAsync("Missing code");
-                        continue;
+
+                        string? code = request.QueryString["code"];
+                        if (string.IsNullOrEmpty(code))
+                        {
+                            response.StatusCode = 400;
+                            await writer.WriteAsync("Missing code\n");
+                            continue;
+                        }
+
+                        // Exchange the code for token
+                        string token = await ExchangeCodeForToken(code);
+                        if (token.Equals(string.Empty))
+                        {
+                            await writer.WriteAsync("Wrong Code\n");
+                        }
+                        var userId = await GetUserIdFromToken(token);
+
+                        if (ulong.TryParse(userId, out var discordUserId))
+                        {
+                            await api.MessageDiscordUser(discordUserId, _config.StartingMessage);
+                            await writer.WriteAsync("Falls du keine Direktnachricht von dem Bot bekommst, wende dich bitte an die Person welche dir den Link geschickt hat\n");
+                        }
                     }
-
-                    // Exchange the code for token
-                    var token = await ExchangeCodeForToken(code);
-                    var userId = await GetUserIdFromToken(token);
-
-                    if (ulong.TryParse(userId, out var discordUserId))
+                    catch (Exception e)
                     {
-                        await api.MessageDiscordUser(discordUserId, _config.StartingMessage);
-                        await using var writer = new StreamWriter(response.OutputStream);
-                        await writer.WriteAsync("Falls du keine Direktnachricht von dem Bot bekommst, wende dich bitte an die Person welche dir den Link geschickt hat");
+                        Console.WriteLine(e.Message);
                     }
                 }
+                
             });
+            
         }
 
         private async Task<string> ExchangeCodeForToken(string code)
@@ -128,7 +150,18 @@ namespace api
             var response = await client.PostAsync("https://discord.com/api/oauth2/token", content);
             var json = await response.Content.ReadAsStringAsync();
 
+            if (_config.DevMode) Console.WriteLine("Response from Discord API: " + json);
+
             var obj = System.Text.Json.JsonDocument.Parse(json);
+            
+            if (json.Contains("\"error\":") && obj.RootElement.TryGetProperty("error", out var errorProperty))
+            {
+                string error = errorProperty.GetString()!;
+                string description = obj.RootElement.GetProperty("error_description").GetString()!;
+                Console.WriteLine($"Error from Discord API: {error} - {description}");
+                return string.Empty;  // Return an empty string or handle the error
+            }
+
             return obj.RootElement.GetProperty("access_token").GetString()!;
         }
 
@@ -137,6 +170,8 @@ namespace api
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
             var response = await client.GetStringAsync("https://discord.com/api/users/@me");
+
+            if(_config.DevMode)Console.WriteLine("Response from Discord: " + response);
 
             var obj = System.Text.Json.JsonDocument.Parse(response);
             return obj.RootElement.GetProperty("id").GetString()!;
@@ -153,6 +188,7 @@ namespace api
             public string ClientSecret { get; set; } = "";
             public string RedirectUri { get; set; } = "";
             public string StartingMessage { get; set; } = "";
+            public bool DevMode { get; set; } = false;
         }
     }
 

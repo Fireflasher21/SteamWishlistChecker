@@ -21,21 +21,22 @@ namespace api
         public readonly Dictionary<AppID, AppBody> AppBodyCache = new();
 
         private SteamConfig _config;
-        private static readonly string API_APP_URL = "https://store.steampowered.com/api/appdetails?AppIDs={0}&cc=de&l=de";
-        private static string API_WISHL_URL = "https://api.steampowered.com/IWishlistService/GetWishlist/v1?key={0}&steamid={0}";
-        private static string API_STEAM_ID = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={0}&steamids={0}";
+        private static readonly string API_APP_URL = "https://store.steampowered.com/api/appdetails?appids={0}&cc=de&l=de";
+        private static string API_WISHL_URL = "https://api.steampowered.com/IWishlistService/GetWishlist/v1?key={0}&steamid=";
+        private static string API_STEAM_ID = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={0}&steamids=";
         private static readonly string steamID64Pattern = @"^7656119[0-9]{10}$";
 
         
         public SteamAPI(SteamConfig config)
         {
             _config = config;
-            API_WISHL_URL = string.Format(API_WISHL_URL,_config.STEAM_API_KEY);
-            API_STEAM_ID  = string.Format(API_STEAM_ID,_config.STEAM_API_KEY);
+            API_WISHL_URL = string.Format(API_WISHL_URL,_config.STEAM_API_KEY) + "{0}";
+            API_STEAM_ID  = string.Format(API_STEAM_ID,_config.STEAM_API_KEY) + "{0}";
         }
         
         public async Task<bool> LoadWishlistOfSteamIDs(HashSet<SteamID> steamIDs)
         {
+
             Console.WriteLine("Starte Wunschlisten update um: " + DateTime.Now.ToString("dd-MM-yyyy HH:MM"));
             try
             {
@@ -48,8 +49,8 @@ namespace api
                     var data = JObject.Parse(response);
                     var responseBody = data["response"];
                     if (responseBody == null) throw new Exception();
-                    var AppIDs = responseBody["items"]?
-                        .Select(item => AppID.Parse(item["AppID"]!.ToString()))
+                    var AppIDs = responseBody["items"]!
+                        .Select(item => AppID.Parse(item["appid"]!.ToString()))
                         .Where(id => id != 0)
                         .ToList();
 

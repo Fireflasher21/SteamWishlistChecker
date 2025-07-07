@@ -82,9 +82,9 @@ namespace api
                 HttpListener listener = new HttpListener();
                 try
                 {
-                    listener.Prefixes.Add(_config.RedirectUri);
+                    listener.Prefixes.Add(_config.LocalServer);
                     listener.Start();
-                    Console.WriteLine("OAuth listener started on " + _config.RedirectUri);
+                    Console.WriteLine("OAuth listener started on " + _config.LocalServer);
                 }
                 catch (HttpListenerException e)
                 {
@@ -187,6 +187,7 @@ namespace api
             public string ClientId { get; set; } = "";
             public string ClientSecret { get; set; } = "";
             public string RedirectUri { get; set; } = "";
+            public string LocalServer { get; set; } = "";
             public string StartingMessage { get; set; } = "";
             public bool DevMode { get; set; } = false;
         }

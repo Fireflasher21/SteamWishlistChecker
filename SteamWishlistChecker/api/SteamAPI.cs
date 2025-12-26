@@ -59,7 +59,12 @@ namespace api
                     {
                         //First add all AppIDs to our Dictionary
                         //foreach (AppID appID in AppIDs) AppID_User_List.Add(appID, new());
-                        AppIDs.ForEach(id => AppID_UserID_List.Add(id, new()));
+                        AppIDs.ForEach(id =>
+                        {
+                            //Catch Breakpoint when id already exists
+                            if(AppID_UserID_List.ContainsKey(id))return; 
+                            AppID_UserID_List.Add(id, new());
+                        });
 
                         //Get DB user_ID from list
                         UserID user_ID = DatabaseHandling.discord_steam_id_List
@@ -75,6 +80,7 @@ namespace api
             }
             catch
             {
+                Console.WriteLine("Something went wrong Loading Wishlists of SteamIDs");
                 return false;
             }
 

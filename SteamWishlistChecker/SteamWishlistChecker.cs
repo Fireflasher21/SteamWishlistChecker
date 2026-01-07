@@ -9,6 +9,7 @@ using DiscordConfig = api.models.DiscordConfig;
 using UserID = System.Int16;
 using AppID = System.Int32;
 using SteamID = System.Int64;
+using System.Security.Cryptography;
 
 
 namespace main
@@ -40,7 +41,18 @@ namespace main
             while (true)
             {
                 await DoUpdate();
-                await Task.Delay((int)TimeSpan.FromDays(1).TotalMilliseconds);
+ 
+                DateTime today = DateTime.Now;
+                TimeOnly starting_time = TimeOnly.ParseExact("16:00","HH:MM");
+
+                var milliseconds_until_time = 0.0;
+                //If time of day is greater than 16 in Minutes
+                if(today.TimeOfDay.TotalMinutes > starting_time.ToTimeSpan().TotalMinutes)
+                {
+                    // Get time in Milliseconds until next update at 16:00
+                    milliseconds_until_time = today.AddDays(1).Subtract(today.Date.AddHours(16)).TotalMilliseconds;
+                }
+                await Task.Delay((int) milliseconds_until_time);
             }
         }
 

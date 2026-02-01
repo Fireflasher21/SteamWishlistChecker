@@ -116,7 +116,7 @@ namespace api
                 }
 
                 AppBodyCache.Add(AppID, new(AppID, name, finalPrice, discount));
-                await Task.Delay((int)TimeSpan.FromSeconds(5).TotalMilliseconds);
+                await Task.Delay((int)TimeSpan.FromSeconds(2).TotalMilliseconds);
             }
             httpClient.Dispose();
 

@@ -38,4 +38,4 @@ I build this since SteamDB does not have an API and wanted to save some time on 
 - The Server is running in EU
 
 ### Request for Data deletion
-- Once u removed your SteamID via the Discord Bot command, your data is permantly erased
+- Once u removed your SteamID via the Discord Bot command, your data is permanently erased

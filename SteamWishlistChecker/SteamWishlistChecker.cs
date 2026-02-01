@@ -10,6 +10,7 @@ using UserID = System.Int16;
 using AppID = System.Int32;
 using SteamID = System.Int64;
 using System.Security.Cryptography;
+using System.Globalization;
 
 
 namespace main
@@ -39,11 +40,9 @@ namespace main
             await _discordAPI.Start();
 
             while (true)
-            {
-                await DoUpdate();
- 
+            { 
                 DateTime today = DateTime.Now;
-                TimeOnly starting_time = TimeOnly.ParseExact("16:00","HH:MM");
+                TimeOnly starting_time = TimeOnly.Parse("16:00",CultureInfo.InvariantCulture);
 
                 var milliseconds_until_time = 0.0;
                 //If time of day is greater than 16 in Minutes
@@ -53,6 +52,8 @@ namespace main
                     milliseconds_until_time = today.AddDays(1).Subtract(today.Date.AddHours(16)).TotalMilliseconds;
                 }
                 await Task.Delay((int) milliseconds_until_time);
+
+                await DoUpdate();
             }
         }
 
@@ -78,7 +79,7 @@ namespace main
 
         private static async Task CheckGamePrices()
         {
-            Console.WriteLine("Starte Check für reduzierte Spiele");
+            Console.WriteLine("Starte Check für reduzierte Spiele um " + DateTime.Now.TimeOfDay);
             //Get all games, which are reduced
             Dictionary<AppID, SteamAPI.AppBody> reducedGames = _steamAPI.AppBodyCache
                                                                         .Where(k => k.Value.discount > 0)

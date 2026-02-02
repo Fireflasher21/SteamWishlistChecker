@@ -44,13 +44,15 @@ namespace main
                 DateTime today = DateTime.Now;
                 TimeOnly starting_time = TimeOnly.Parse("16:00",CultureInfo.InvariantCulture);
 
-                var milliseconds_until_time = 0.0;
+                double milliseconds_until_time;
                 //If time of day is greater than 16 in Minutes
-                if(today.TimeOfDay.TotalMinutes > starting_time.ToTimeSpan().TotalMinutes)
-                {
+                if (today.TimeOfDay.TotalMinutes > starting_time.ToTimeSpan().TotalMinutes)
+                {   
                     // Get time in Milliseconds until next update at 16:00
-                    milliseconds_until_time = today.AddDays(1).Subtract(today.Date.AddHours(16)).TotalMilliseconds;
+                    // 24h - time of day + time to start
+                    milliseconds_until_time = TimeSpan.FromDays(1).TotalMilliseconds - today.TimeOfDay.TotalMilliseconds + starting_time.ToTimeSpan().TotalMilliseconds;
                 }
+                else milliseconds_until_time = starting_time.ToTimeSpan().TotalMilliseconds - today.TimeOfDay.TotalMilliseconds;
                 await Task.Delay((int) milliseconds_until_time);
 
                 await DoUpdate();

@@ -42,13 +42,13 @@ namespace main
             while (true)
             { 
                 DateTime today = DateTime.Now;
-                TimeOnly starting_time = TimeOnly.Parse("16:00",CultureInfo.InvariantCulture);
+                TimeOnly starting_time = TimeOnly.Parse("14:00",CultureInfo.InvariantCulture);
 
                 double milliseconds_until_time;
                 //If time of day is greater than 16 in Minutes
                 if (today.TimeOfDay.TotalMinutes > starting_time.ToTimeSpan().TotalMinutes)
                 {   
-                    // Get time in Milliseconds until next update at 16:00
+                    // Get time in Milliseconds until next update at 14:00
                     // 24h - time of day + time to start
                     milliseconds_until_time = TimeSpan.FromDays(1).TotalMilliseconds - today.TimeOfDay.TotalMilliseconds + starting_time.ToTimeSpan().TotalMilliseconds;
                 }
@@ -87,7 +87,15 @@ namespace main
                                                                         .Where(k => k.Value.discount > 0)
                                                                         .ToDictionary();
             var maxReducedGames = await DatabaseHandling.AddGamesToDB(reducedGames);
-
+            
+            // Send Messages in at 16:00
+            TimeOnly sendMessagesAtTime = TimeOnly.Parse("16:00",CultureInfo.InvariantCulture);
+            // Wait time difference between now an 16:00
+            double difference = sendMessagesAtTime.ToTimeSpan().TotalMilliseconds - DateTime.Now.TimeOfDay.TotalMilliseconds;
+            if(difference < 0) Console.WriteLine("Checking Game Prices took longer than 2h, pls reduce time for checks or increase dedicated Checks");
+            else await Task.Delay((int) difference);
+            
+            // Send Messages to users
             await MessageDiscordUser(maxReducedGames);
         }
 

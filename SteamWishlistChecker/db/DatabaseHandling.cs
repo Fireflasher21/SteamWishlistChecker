@@ -97,6 +97,27 @@ namespace db
             newlyAddedUsers.Add(user_ID);
         }
 
+        public static async Task DeleteUser(ulong discordid)
+        {
+            using var conn = new SqliteConnection(_dbPath);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                DELETE FROM Users 
+                WHERE Discord_ID = $did";
+            cmd.Parameters.AddWithValue("$did", discordid);
+            var result = await cmd.ExecuteScalarAsync();
+            await conn.CloseAsync();
+            
+            if (result != null)
+            {   
+                Int16 user_ID = Convert.ToInt16(result);
+                discord_steam_id_List.Remove(user_ID);
+                if(newlyAddedUsers.Contains(user_ID)) newlyAddedUsers.Remove(user_ID);
+            }
+        }
+
         public static async Task<SteamID> GetSteamIDByDiscordID(ulong discordid)
         {
             using var conn = new SqliteConnection(_dbPath);

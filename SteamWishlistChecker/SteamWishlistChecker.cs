@@ -1,5 +1,4 @@
-﻿using api;
-using db;
+﻿using db;
 using Microsoft.Extensions.Configuration;
 
 using SteamAPI = api.SteamAPI;
@@ -9,7 +8,6 @@ using DiscordConfig = api.models.DiscordConfig;
 using UserID = System.Int16;
 using AppID = System.Int32;
 using SteamID = System.Int64;
-using System.Security.Cryptography;
 using System.Globalization;
 
 
@@ -19,6 +17,7 @@ namespace main
     public static class SteamWishlistChecker
     {
         public static IConfigurationRoot Configs { get; private set; }
+        public static List<SteamID> errorOnWishlist = new();
         private static DiscordAPI _discordAPI;
         private static SteamAPI _steamAPI;
 
@@ -61,9 +60,9 @@ namespace main
 
         private static async Task DoUpdate()
         {
-            HashSet<SteamID> steamIDs = DatabaseHandling.discord_steam_id_List.Select(k => k.Value.Item1).ToHashSet();
+            HashSet<(UserID,SteamID)> userID_steamID_s = DatabaseHandling.discord_steam_id_List.Select(k => (k.Key,k.Value.Item1)).ToHashSet();
 
-            if (await _steamAPI.LoadWishlistOfSteamIDs(steamIDs))
+            if (await _steamAPI.LoadWishlistOfSteamIDs(userID_steamID_s))
             {
                 await CheckGamePrices();
             }
@@ -106,6 +105,14 @@ namespace main
             //Foreach user
             foreach (UserID user_id in DatabaseHandling.discord_steam_id_List.Keys)
             {
+                if(errorOnWishlist.Contains(user_id))
+                {
+                    await _discordAPI.MessageDiscordUser(DatabaseHandling.discord_steam_id_List[user_id].Item2,
+                        "We could not load your Wishlist.\n" +
+                        "Is your Wishlist private or did your account get deleted?\n" +
+                        "To disable this message, check your wishlist/account or /unsubscribe");
+                    continue;
+                }
                 //When user was newly added, send all games even those which where already reduced this steam sale
                 bool sendAllReducedGames = DatabaseHandling.newlyAddedUsers.Contains(user_id);
                 if(sendAllReducedGames) DatabaseHandling.newlyAddedUsers.Remove(user_id);
@@ -127,6 +134,7 @@ namespace main
 
             _steamAPI.AppBodyCache.Clear();
             _steamAPI.AppID_UserID_List.Clear();
+            errorOnWishlist.Clear();
         }
     }
 }

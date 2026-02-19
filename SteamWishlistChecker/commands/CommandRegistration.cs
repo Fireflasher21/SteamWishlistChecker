@@ -19,16 +19,20 @@ namespace commands
         {
             // Instanzieren und speichern
             var setSteamCommand = new SetSteamCommand(_client);
+            var unsubscribe = new Unsubscribe(_client);
             _commands.Add(setSteamCommand);
+            _commands.Add(unsubscribe);
 
             // Registriere alle Commands beim Bot-Start
             _client.Ready += async () =>
             {
                 await setSteamCommand.RegisterAsync(); // Globaler Slash-Command
+                await unsubscribe.RegisterAsync(); // Globaler Slash-Command
             };
 
             // Aktiviere die Handler
             setSteamCommand.HookHandler();
+            unsubscribe.HookHandler();
         }
     }
 }

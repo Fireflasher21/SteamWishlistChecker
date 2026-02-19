@@ -6,6 +6,7 @@ using SteamConfig = api.models.SteamConfig;
 using UserID = System.Int16;
 using AppID = System.Int32;
 using SteamID = System.Int64;
+using main;
 
 namespace api
 {
@@ -34,7 +35,7 @@ namespace api
             API_STEAM_ID  = string.Format(API_STEAM_ID,_config.STEAM_API_KEY) + "{0}";
         }
         
-        public async Task<bool> LoadWishlistOfSteamIDs(HashSet<SteamID> steamIDs)
+        public async Task<bool> LoadWishlistOfSteamIDs(HashSet<(UserID,SteamID)> user_steam_ids)
         {
 
             Console.WriteLine("Starte Wunschlisten update um: " + DateTime.Now.ToString("dd-MM-yyyy HH:MM"));
@@ -42,13 +43,28 @@ namespace api
             {
                 var httpClient = new HttpClient();
 
-                foreach (SteamID steamid in steamIDs)
+                foreach (var idTuple in user_steam_ids)
                 {
+                    UserID user_ID = idTuple.Item1;
+
+
+                    SteamID steamid = idTuple.Item2;
                     string url = string.Format(API_WISHL_URL, steamid);
                     var response = await httpClient.GetStringAsync(url);
                     var data = JObject.Parse(response);
                     var responseBody = data["response"];
-                    if (responseBody == null) throw new Exception();
+                    
+                    //If responseBody is null, either Steam Acc is deleted or Wishlist is private
+                    if (responseBody == null)
+                    {
+                        Console.WriteLine("SteamID: " + steamid + " had inaccessible Wishlist, skipping and messaging user");
+                        SteamWishlistChecker.errorOnWishlist.Add(user_ID);
+                        continue;
+                    }
+
+                    //If Wishlist is empty, skip steamID
+                    if(responseBody.ToString().Equals("{}")) continue;
+
                     var AppIDs = responseBody["items"]!
                         .Select(item => AppID.Parse(item["appid"]!.ToString()))
                         .Where(id => id != 0)
@@ -66,11 +82,9 @@ namespace api
                             AppID_UserID_List.Add(id, new());
                         });
 
-                        //Get DB user_ID from list
-                        UserID user_ID = DatabaseHandling.discord_steam_id_List
-                                                                    .Where(k => k.Value.Item1 == steamid)
-                                                                    .Select(k => k.Key)
-                                                                    .ToList().First();
+                        
+                        //If by the small chance that someone deletes its entry right at that time, skip
+                        if(!DatabaseHandling.discord_steam_id_List.ContainsKey(user_ID))continue;
                         //Add user_id to AppID
                         AppIDs.ForEach(i => AppID_UserID_List[i].Add(user_ID));
 
@@ -119,8 +133,6 @@ namespace api
                 await Task.Delay((int)TimeSpan.FromSeconds(2).TotalMilliseconds);
             }
             httpClient.Dispose();
-
-            //    await SteamWishlistChecker.steamWishlistChecker.CheckGamePrices();
         }
 
         /// <summary>

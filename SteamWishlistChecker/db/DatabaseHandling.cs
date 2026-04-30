@@ -6,6 +6,8 @@ using Microsoft.Data.Sqlite;
 using UserID = System.Int16;
 using AppID = System.Int32;
 using SteamID = System.Int64;
+using System.ComponentModel;
+using System.Collections.Specialized;
 
 namespace db
 {
@@ -216,6 +218,22 @@ namespace db
 
             await conn.CloseAsync();
             return maxReducedGames;
+        }
+
+        public static async Task<List<AppID>> getAllTrackedGameIDs()
+        {
+            List<AppID> appIDList = [];
+            using var conn = new SqliteConnection(_dbPath);
+            await conn.OpenAsync();
+
+            var selectAppIdCmd = conn.CreateCommand();
+            selectAppIdCmd.CommandText = "SELECT App_ID FROM TrackedApps";
+
+            using var reader = await selectAppIdCmd.ExecuteReaderAsync();
+            while(await reader.ReadAsync()) appIDList.Add(reader.GetInt32(0));
+            
+            await conn.CloseAsync();
+            return appIDList;
         }
 
     }

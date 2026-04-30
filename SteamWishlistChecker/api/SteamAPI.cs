@@ -78,8 +78,7 @@ namespace api
                         AppIDs.ForEach(id =>
                         {
                             //Catch Breakpoint when id already exists
-                            if(AppID_UserID_List.ContainsKey(id))return; 
-                            AppID_UserID_List.Add(id, new());
+                            if(!AppID_UserID_List.ContainsKey(id)) AppID_UserID_List.Add(id, new()); 
                         });
 
                         
@@ -97,6 +96,10 @@ namespace api
                 Console.WriteLine("Something went wrong Loading Wishlists of SteamIDs");
                 return false;
             }
+
+            // Add all Tracked Games so far (including the not active Wishlist Games)
+            var allTrackedGames = await DatabaseHandling.getAllTrackedGameIDs();
+            allTrackedGames.ForEach(id =>{if(!AppID_UserID_List.ContainsKey(id)) AppID_UserID_List.Add(id,new()); });
 
             await CheckPricesOfAppIDs();
             return true;

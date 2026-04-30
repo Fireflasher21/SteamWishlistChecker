@@ -58,3 +58,5 @@ nunit-*.xml
 .env
 *.env
 appsettings.json
+.vscode/dockerfile
+.vscode/docker-compose.yml

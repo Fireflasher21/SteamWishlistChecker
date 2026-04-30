@@ -40,19 +40,8 @@ namespace main
 
             while (true)
             { 
-                DateTime today = DateTime.Now;
-                TimeOnly starting_time = TimeOnly.Parse("14:00",CultureInfo.InvariantCulture);
-
-                double milliseconds_until_time;
-                //If time of day is greater than 16 in Minutes
-                if (today.TimeOfDay.TotalMinutes > starting_time.ToTimeSpan().TotalMinutes)
-                {   
-                    // Get time in Milliseconds until next update at 14:00
-                    // 24h - time of day + time to start
-                    milliseconds_until_time = TimeSpan.FromDays(1).TotalMilliseconds - today.TimeOfDay.TotalMilliseconds + starting_time.ToTimeSpan().TotalMilliseconds;
-                }
-                else milliseconds_until_time = starting_time.ToTimeSpan().TotalMilliseconds - today.TimeOfDay.TotalMilliseconds;
-                await Task.Delay((int) milliseconds_until_time);
+                int milliseconds_until_time = getTimeDifferenceToNextTime(TimeOnly.Parse("14:00",CultureInfo.InvariantCulture));
+                await Task.Delay(milliseconds_until_time);
 
                 await DoUpdate();
             }
@@ -80,7 +69,7 @@ namespace main
 
         private static async Task CheckGamePrices()
         {
-            Console.WriteLine("Starte Check für reduzierte Spiele um " + DateTime.Now.TimeOfDay);
+            Console.WriteLine("Starte Check für reduzierte Spiele um " + DateTime.Now.ToLocalTime());
             //Get all games, which are reduced
             Dictionary<AppID, SteamAPI.AppBody> reducedGames = _steamAPI.AppBodyCache
                                                                         .Where(k => k.Value.discount > 0)
@@ -89,10 +78,11 @@ namespace main
             
             // Send Messages in at 16:00
             TimeOnly sendMessagesAtTime = TimeOnly.Parse("16:00",CultureInfo.InvariantCulture);
+            int milliseconds_until_time = getTimeDifferenceToNextTime(sendMessagesAtTime);
             // Wait time difference between now an 16:00
-            double difference = sendMessagesAtTime.ToTimeSpan().TotalMilliseconds - DateTime.Now.TimeOfDay.TotalMilliseconds;
-            if(difference < 0) Console.WriteLine("Checking Game Prices took longer than 2h, pls reduce time for checks or increase dedicated Checks");
-            else await Task.Delay((int) difference);
+            if(milliseconds_until_time > TimeSpan.FromHours(2).TotalMilliseconds) 
+                Console.WriteLine("Checking Game Prices took longer than 2h, pls reduce time for checks or increase dedicated Checks");
+            else await Task.Delay(milliseconds_until_time);
             
             // Send Messages to users
             await MessageDiscordUser(maxReducedGames);
@@ -115,7 +105,7 @@ namespace main
                 }
                 //When user was newly added, send all games even those which where already reduced this steam sale
                 bool sendAllReducedGames = DatabaseHandling.newlyAddedUsers.Contains(user_id);
-                if(sendAllReducedGames) DatabaseHandling.newlyAddedUsers.Remove(user_id);
+                if(sendAllReducedGames && _steamAPI.AppID_UserID_List.Select(k => k.Value).Any(k => k.Contains(user_id))) DatabaseHandling.newlyAddedUsers.Remove(user_id);
                 //AppID List from user 
                 HashSet<AppID> appids_from_user = _steamAPI.AppID_UserID_List
                                                             .Where(k => k.Value.Contains(user_id))
@@ -135,6 +125,22 @@ namespace main
             _steamAPI.AppBodyCache.Clear();
             _steamAPI.AppID_UserID_List.Clear();
             errorOnWishlist.Clear();
+        }
+
+
+        public static int getTimeDifferenceToNextTime(TimeOnly starting_time)
+        {
+            TimeSpan time_Today = DateTime.Now.TimeOfDay;
+
+            //If time of day is greater than starting_time
+            if (time_Today > starting_time.ToTimeSpan())
+            {   
+                // Get time in Milliseconds until next TimeOfDay from starting_time
+                // 24h - time of day + time to start
+                return (int) (TimeSpan.FromDays(1).TotalMilliseconds - time_Today.TotalMilliseconds + starting_time.ToTimeSpan().TotalMilliseconds);
+            }
+            
+            return (int) (starting_time.ToTimeSpan().TotalMilliseconds - time_Today.TotalMilliseconds);
         }
     }
 }

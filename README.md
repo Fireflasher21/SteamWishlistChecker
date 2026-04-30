@@ -41,6 +41,7 @@ I build this since SteamDB does not have an API and wanted to save some time on 
 - Once u removed your SteamID via the Discord Bot command, your data is permanently erased
 
 ### Template appsettings.json
+```
 {
   "Discord": {
     "BotToken": "Your Bot Token",
@@ -55,3 +56,4 @@ I build this since SteamDB does not have an API and wanted to save some time on 
     "STEAM_API_KEY" : "Your Steam WEB API Key"
   }
 }
+```

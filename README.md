@@ -39,3 +39,21 @@ I build this since SteamDB does not have an API and wanted to save some time on 
 
 ### Request for Data deletion
 - Once u removed your SteamID via the Discord Bot command, your data is permanently erased
+
+### Template appsettings.json
+```
+{
+  "Discord": {
+    "BotToken": "Your Bot Token",
+    "ClientId": "Client ID for oAuth2",
+    "ClientSecret": "Client Secret for oAuth2",
+    "RedirectUri": "Your oAuth2 Authentication RedirectUrl",
+    "LocalServer": "Your Local oAuth2 Authentication URL",
+    "StartingMessage": "What your starting Message should be",
+    "DevMode": "false"
+  },
+  "Steam": {
+    "STEAM_API_KEY" : "Your Steam WEB API Key"
+  }
+}
+```

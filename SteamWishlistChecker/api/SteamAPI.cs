@@ -124,12 +124,12 @@ namespace api
                 var priceData = appData?["price_overview"];
 
                 //when no price date, we cant get price
-                Int16 finalPrice = 0;
-                Int16 discount = 0;
+                int finalPrice = 0;
+                int discount = 0;
                 if (priceData != null)
                 {
-                    finalPrice = priceData["final"]?.Value<Int16>() ?? 0;
-                    discount = priceData["discount_percent"]?.Value<Int16>() ?? 0;
+                    finalPrice = priceData["final"]?.Value<int>() ?? 0;
+                    discount = priceData["discount_percent"]?.Value<int>() ?? 0;
                 }
 
                 AppBodyCache.Add(AppID, new(AppID, name, finalPrice, discount));
@@ -166,11 +166,11 @@ namespace api
         {
             public AppID appID { get; private set; }
             public string name { get; private set; }
-            public Int16 price { get; private set; }
-            public Int16 discount { get; private set; }
+            public int price { get; private set; }
+            public int discount { get; private set; }
             public bool alreadyReduced { get; private set; }
 
-            public AppBody(AppID appID, string name, Int16 price, Int16 discount)
+            public AppBody(AppID appID, string name, int price, int discount)
             {
                 this.appID = appID;
                 this.name = name;

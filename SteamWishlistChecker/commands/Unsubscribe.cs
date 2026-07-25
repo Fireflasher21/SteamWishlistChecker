@@ -38,12 +38,12 @@ namespace commands
                 ulong discordUserId = command.User.Id;
 
                 var steamIdInDb = await DatabaseHandling.GetSteamIDByDiscordID(discordUserId);
-
+                
+                String message = "❌ Du bist nicht registriert.";
+                
                 if (steamIdInDb == -1)
                 {
-                    await command.RespondAsync(
-                        "❌ Du bist nicht registriert.",
-                        ephemeral: true);
+                    await command.RespondAsync(message,ephemeral: true);
 
                     return;
                 }
@@ -51,29 +51,25 @@ namespace commands
                 await command.DeferAsync(ephemeral: true);
 
                 await DatabaseHandling.DeleteUser(discordUserId);
+                
+                message = "✅ Deine Discord- und SteamID wurden erfolgreich gelöscht. Du erhältst künftig keine Benachrichtigungen mehr.";
+                
+                Console.WriteLine($"Eintrag wurde von {command.User.GlobalName ?? command.User.Username} gelöscht.");
 
-                Console.WriteLine(
-                    $"Eintrag wurde von {command.User.GlobalName ?? command.User.Username} gelöscht.");
-
-                await command.FollowupAsync(
-                    "✅ Deine Discord- und SteamID wurden erfolgreich gelöscht. Du erhältst künftig keine Benachrichtigungen mehr.",
-                    ephemeral: true);
+                await command.FollowupAsync(message,ephemeral: true);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Fehler in Unsubscribe: {ex}");
-
+                message = "❌ Beim Löschen deiner Daten ist ein Fehler aufgetreten.";
+                
                 if (!command.HasResponded)
                 {
-                    await command.RespondAsync(
-                        "❌ Beim Löschen deiner Daten ist ein Fehler aufgetreten.",
-                        ephemeral: true);
+                    await command.RespondAsync(message,ephemeral: true);
                 }
                 else
                 {
-                    await command.FollowupAsync(
-                        "❌ Beim Löschen deiner Daten ist ein Fehler aufgetreten.",
-                        ephemeral: true);
+                    await command.FollowupAsync(message,ephemeral: true);
                 }
             }
         }

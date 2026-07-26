@@ -41,14 +41,6 @@ namespace db
                                 MaxDiscountPercent INTEGER,
                                 Timestamp INTEGER NOT NULL
                             );
-
-                            CREATE TABLE IF NOT EXISTS SubscribedApps (
-                                Tracking_ID INTEGER PRIMARY KEY,
-                                UserID INTEGER NOT NULL,
-                                AppID INTEGER NOT NULL,
-                                FOREIGN KEY (UserID) REFERENCES Users (User_ID),
-                                FOREIGN KEY (AppID) REFERENCES TrackedApps (App_ID)
-                            );
             ";
             await cmd.ExecuteNonQueryAsync();
             await conn.CloseAsync();

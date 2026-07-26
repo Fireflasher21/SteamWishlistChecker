@@ -1,14 +1,14 @@
-using api;
 using db;
 using Discord;
 using Discord.WebSocket;
 
 namespace commands
 {
-
-    public class Unsubscribe
+    public class Unsubscribe : ISlashCommand
     {
         private readonly DiscordSocketClient _client;
+
+        public string Name => "unsubscribe";
 
         public Unsubscribe(DiscordSocketClient client)
         {
@@ -18,8 +18,8 @@ namespace commands
         public async Task RegisterAsync(SocketGuild? guild = null)
         {
             var command = new SlashCommandBuilder()
-                .WithName("unsubscribe")
-                .WithDescription("Löscht deine gespeicherte Discord und SteamID");
+                .WithName(Name)
+                .WithDescription("Löscht deine gespeicherte Discord- und SteamID");
 
             if (guild != null)
             {
@@ -29,39 +29,51 @@ namespace commands
             {
                 await _client.CreateGlobalApplicationCommandAsync(command.Build());
             }
-
         }
 
-        public void HookHandler()
+        public async Task ExecuteAsync(SocketSlashCommand command)
         {
-            _client.SlashCommandExecuted += async (SocketSlashCommand command) =>
+
+            String message = "❌ Du bist nicht registriert.";
+                
+            try
             {
-                try
+                ulong discordUserId = command.User.Id;
+
+                var steamIdInDb = await DatabaseHandling.GetSteamIDByDiscordID(discordUserId);
+                
+                if (steamIdInDb == -1)
                 {
-                    var discordUserId = command.User.Id;
-                    var steamid_indb = await DatabaseHandling.GetSteamIDByDiscordID(discordUserId);
-                    
-                    if (steamid_indb == -1)
-                    {
-                        await command.RespondAsync("❌ Du bist nicht registriert");
-                        return;
-                    }
+                    await command.RespondAsync(message,ephemeral: true);
 
-                    await command.DeferAsync(ephemeral: true);
-
-                    await DatabaseHandling.DeleteUser(discordUserId);
-                    Console.WriteLine("Eintrag wurde von " + command.User.GlobalName + " gelöscht");
-                    string message = "Deine Discord und SteamID wurden erfolgreich gelöscht, du bekommst in Zukunft keine Nachrichten mehr";
-                    
-                    await command.FollowupAsync(message);
-
+                    return;
                 }
-                catch (Exception ex)
+
+                await command.DeferAsync(ephemeral: true);
+
+                await DatabaseHandling.DeleteUser(discordUserId);
+                
+                message = "✅ Deine Discord- und SteamID wurden erfolgreich gelöscht. Du erhältst künftig keine Benachrichtigungen mehr.";
+                
+                Console.WriteLine($"Eintrag wurde von {command.User.GlobalName ?? command.User.Username} gelöscht.");
+
+                await command.FollowupAsync(message,ephemeral: true);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fehler in Unsubscribe: {ex}");
+                message = "❌ Beim Löschen deiner Daten ist ein Fehler aufgetreten.";
+                
+                if (!command.HasResponded)
                 {
-                    Console.WriteLine(ex.Message);
+                    await command.RespondAsync(message,ephemeral: true);
                 }
-            };
-
+                else
+                {
+                    await command.FollowupAsync(message,ephemeral: true);
+                }
+            }
         }
     }
 }
+

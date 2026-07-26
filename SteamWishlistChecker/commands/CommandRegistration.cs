@@ -1,14 +1,13 @@
 using Discord.WebSocket;
-using SQLitePCL;
 
 namespace commands
 {
     public class CommandRegistration
     {
         private readonly DiscordSocketClient _client;
+        private readonly Dictionary<string, ISlashCommand> _commands = new();
 
-        // Liste aller Commands
-        private readonly List<object> _commands = new();
+        private bool _commandsRegistered = false;
 
         public CommandRegistration(DiscordSocketClient client)
         {
@@ -17,22 +16,42 @@ namespace commands
 
         public void Initialize()
         {
-            // Instanzieren und speichern
-            var setSteamCommand = new SetSteamCommand(_client);
-            var unsubscribe = new Unsubscribe(_client);
-            _commands.Add(setSteamCommand);
-            _commands.Add(unsubscribe);
+            // Commands hinzufügen
+            Register(new SetSteamCommand(_client));
+            Register(new Unsubscribe(_client));
 
-            // Registriere alle Commands beim Bot-Start
-            _client.Ready += async () =>
+            // Events abonnieren
+            _client.Ready += OnReady;
+            _client.SlashCommandExecuted += OnSlashCommandExecuted;
+        }
+
+        private void Register(ISlashCommand command)
+        {
+            _commands.Add(command.Name, command);
+        }
+
+        private async Task OnReady()
+        {
+            // Verhindert doppelte Registrierung bei Reconnects
+            if (_commandsRegistered)
+                return;
+
+            _commandsRegistered = true;
+
+            foreach (var command in _commands.Values)
             {
-                await setSteamCommand.RegisterAsync(); // Globaler Slash-Command
-                await unsubscribe.RegisterAsync(); // Globaler Slash-Command
-            };
+                await command.RegisterAsync();
+            }
+        }
 
-            // Aktiviere die Handler
-            setSteamCommand.HookHandler();
-            unsubscribe.HookHandler();
+        private async Task OnSlashCommandExecuted(SocketSlashCommand command)
+        {
+            if (_commands.TryGetValue(command.Data.Name, out var slashCommand))
+            {
+                await slashCommand.ExecuteAsync(command);
+            }
         }
     }
 }
+
+

@@ -32,6 +32,7 @@ namespace api
             await _client.LoginAsync(TokenType.Bot, _config.BotToken);
             await _client.StartAsync();
             _oAuthenticator.StartOAuthListener(this);
+            await _client.SetStatusAsync(UserStatus.Online);
         }
 
         public async Task MessageDiscordUser(ulong discordid, HashSet<SteamAPI.AppBody> appBodies)

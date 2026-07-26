@@ -25,6 +25,8 @@ namespace api
             _client = new DiscordSocketClient();
             _commands = new CommandRegistration(_client);
             _commands.Initialize();
+
+            _client.Ready += OnReadyAsync;
         }
 
         public async Task Start()
@@ -32,7 +34,14 @@ namespace api
             await _client.LoginAsync(TokenType.Bot, _config.BotToken);
             await _client.StartAsync();
             _oAuthenticator.StartOAuthListener(this);
+        }
+
+        private async Task OnReadyAsync()
+        {
+
             await _client.SetStatusAsync(UserStatus.Online);
+            Console.WriteLine("Client Ready");
+            
         }
 
         public async Task MessageDiscordUser(ulong discordid, HashSet<SteamAPI.AppBody> appBodies)

@@ -33,13 +33,14 @@ namespace commands
 
         public async Task ExecuteAsync(SocketSlashCommand command)
         {
+
+            String message = "❌ Du bist nicht registriert.";
+                
             try
             {
                 ulong discordUserId = command.User.Id;
 
                 var steamIdInDb = await DatabaseHandling.GetSteamIDByDiscordID(discordUserId);
-                
-                String message = "❌ Du bist nicht registriert.";
                 
                 if (steamIdInDb == -1)
                 {

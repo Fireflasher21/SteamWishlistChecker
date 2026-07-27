@@ -79,7 +79,7 @@ namespace main
 
         private async Task CheckGamePrices()
         {
-            Console.WriteLine("Starte Check für reduzierte Spiele um " + DateTime.Now.ToLocalTime());
+            Console.WriteLine("Starte Check für reduzierte Spiele um " + DateTime.Now.ToString("dd-MM-yyyy HH:mm"));
             //Get all games, which are reduced
             Dictionary<AppID, SteamAPI.AppBody> reducedGames = _steamAPI.AppBodyCache
                                                                         .Where(k => k.Value.discount > 0)

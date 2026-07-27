@@ -40,7 +40,7 @@ namespace api
         public async Task<bool> LoadWishlistOfSteamIDs(HashSet<(UserID,SteamID)> user_steam_ids)
         {
 
-            Console.WriteLine("Starte Wunschlisten update um: " + DateTime.Now.ToString("dd-MM-yyyy HH:MM"));
+            Console.WriteLine("Starte Wunschlisten update um: " + DateTime.Now.ToString("dd-MM-yyyy HH:mm"));
             try
             {
                 var httpClient = new HttpClient();

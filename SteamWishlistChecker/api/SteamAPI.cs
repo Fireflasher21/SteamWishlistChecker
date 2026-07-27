@@ -12,14 +12,16 @@ namespace api
 {
 
 
-    public class SteamAPI
+    public class SteamAPI : ISteamAPI
     {
 
         //<AppID, List<userID>>
         public readonly Dictionary<AppID, HashSet<UserID>> AppID_UserID_List = new();
+        public IReadOnlyDictionary<AppID, HashSet<UserID>> AppIDUserIds => AppID_UserID_List;
 
         //<AppID, AppInfoBody>
-        public readonly Dictionary<AppID, AppBody> AppBodyCache = new();
+        public readonly Dictionary<AppID, AppBody> App_Body_Cache = new();
+        public IReadOnlyDictionary<AppID, AppBody> AppBodyCache => App_Body_Cache;
 
         private SteamConfig _config;
         private static readonly string API_APP_URL = "https://store.steampowered.com/api/appdetails?appids={0}&cc=de&l=de";
@@ -132,7 +134,7 @@ namespace api
                     discount = priceData["discount_percent"]?.Value<int>() ?? 0;
                 }
 
-                AppBodyCache.Add(AppID, new(AppID, name, finalPrice, discount));
+             App_Body_Cache.Add(AppID, new(AppID, name, finalPrice, discount));
                 await Task.Delay((int)TimeSpan.FromSeconds(2).TotalMilliseconds);
             }
             httpClient.Dispose();
@@ -160,6 +162,11 @@ namespace api
             return responseBody == null ? -2 : 1;
         }
 
+        public void ClearCache()
+        {
+            AppID_UserID_List.Clear();
+            App_Body_Cache.Clear();
+        }
 
 
         public class AppBody

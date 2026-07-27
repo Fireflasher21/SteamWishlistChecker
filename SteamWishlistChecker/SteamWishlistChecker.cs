@@ -9,31 +9,51 @@ using UserID = System.Int16;
 using AppID = System.Int32;
 using SteamID = System.Int64;
 using System.Globalization;
+using api;
 
 
 namespace main
 {
 
-    public static class SteamWishlistChecker
+    public class SteamWishlistChecker
     {
-        public static IConfigurationRoot Configs { get; private set; }
         public static List<SteamID> errorOnWishlist = new();
-        private static DiscordAPI _discordAPI;
-        private static SteamAPI _steamAPI;
+        private readonly IDiscordAPI _discordAPI;
+        private readonly ISteamAPI _steamAPI;
 
-        //Runs before Main (static constructor)
-        static SteamWishlistChecker()
+        public SteamWishlistChecker(ISteamAPI isteamAPI, IDiscordAPI idiscordAPI)
         {
-            Configs = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-            .Build();
-
-            _steamAPI = new SteamAPI(GetConfigEntry<SteamConfig>("Steam"));
-            _discordAPI = new DiscordAPI(GetConfigEntry<DiscordConfig>("Discord"));
+            _steamAPI = isteamAPI;
+            _discordAPI = idiscordAPI;
         }
+    
 
         private static async Task Main(string[] args)
+        {
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json")
+                .Build();
+
+
+            var steamAPI = new SteamAPI(
+                config.GetSection("Steam").Get<SteamConfig>()!);
+
+
+            var discordAPI = new DiscordAPI(
+                config.GetSection("Discord").Get<DiscordConfig>()!);
+
+
+            var checker = new SteamWishlistChecker(
+                steamAPI,
+                discordAPI);
+
+
+            await checker.Run();
+        }
+
+
+        private async Task Run()
         {
             await DatabaseHandling.InitDatabase();
             await _discordAPI.Start();
@@ -47,7 +67,7 @@ namespace main
             }
         }
 
-        private static async Task DoUpdate()
+        private async Task DoUpdate()
         {
             HashSet<(UserID,SteamID)> userID_steamID_s = DatabaseHandling.discord_steam_id_List.Select(k => (k.Key,k.Value.Item1)).ToHashSet();
 
@@ -57,17 +77,7 @@ namespace main
             }
         }
 
-        private static T GetConfigEntry<T>(string section)
-        {
-            T? config = Configs.GetSection(section).Get<T>();
-            if (config == null) {   
-                throw new Exception(typeof(T).Name + " is not found in config");
-            }
-
-            return config;
-        }
-
-        private static async Task CheckGamePrices()
+        private async Task CheckGamePrices()
         {
             Console.WriteLine("Starte Check für reduzierte Spiele um " + DateTime.Now.ToLocalTime());
             //Get all games, which are reduced
@@ -88,9 +98,9 @@ namespace main
             await MessageDiscordUser(maxReducedGames);
         }
 
-        private static async Task MessageDiscordUser(Dictionary<AppID, SteamAPI.AppBody> reducedGames)
+        private async Task MessageDiscordUser(Dictionary<AppID, SteamAPI.AppBody> reducedGames)
         {
-            if (_steamAPI.AppID_UserID_List.Count <= 0) return;
+            if (_steamAPI.AppIDUserIds.Count <= 0) return;
 
             //Foreach user
             foreach (UserID user_id in DatabaseHandling.discord_steam_id_List.Keys)
@@ -105,9 +115,9 @@ namespace main
                 }
                 //When user was newly added, send all games even those which where already reduced this steam sale
                 bool sendAllReducedGames = DatabaseHandling.newlyAddedUsers.Contains(user_id);
-                if(sendAllReducedGames && _steamAPI.AppID_UserID_List.Select(k => k.Value).Any(k => k.Contains(user_id))) DatabaseHandling.newlyAddedUsers.Remove(user_id);
+                if(sendAllReducedGames && _steamAPI.AppIDUserIds.Select(k => k.Value).Any(k => k.Contains(user_id))) DatabaseHandling.newlyAddedUsers.Remove(user_id);
                 //AppID List from user 
-                HashSet<AppID> appids_from_user = _steamAPI.AppID_UserID_List
+                HashSet<AppID> appids_from_user = _steamAPI.AppIDUserIds
                                                             .Where(k => k.Value.Contains(user_id))
                                                             .Select(k => k.Key)
                                                             .ToHashSet();
@@ -122,8 +132,7 @@ namespace main
             }
 
 
-            _steamAPI.AppBodyCache.Clear();
-            _steamAPI.AppID_UserID_List.Clear();
+            _steamAPI.ClearCache();
             errorOnWishlist.Clear();
         }
 

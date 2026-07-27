@@ -8,7 +8,7 @@ using DiscordConfig = api.models.DiscordConfig;
 
 namespace api
 {
-    public class DiscordAPI
+    public class DiscordAPI : IDiscordAPI
     {
         private DiscordSocketClient _client;
         

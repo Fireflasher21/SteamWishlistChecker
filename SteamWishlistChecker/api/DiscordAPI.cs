@@ -55,6 +55,7 @@ namespace api
             }
         }
 
+
         public async Task MessageDiscordUser(ulong discordid, string messages)
         {
             try
@@ -74,6 +75,12 @@ namespace api
                 Console.WriteLine($"❌ Failed to DM user {discordid}: {ex.Message}");
             }
         }
+
+        public String GetWebHookURL()
+        {
+            return _config.WebhookUrl != null ? _config.WebhookUrl : "";
+        }
+
     }
 
     public class OAuthenticator
@@ -199,6 +206,7 @@ namespace api
             public string RedirectUri { get; set; } = "";
             public string LocalServer { get; set; } = "";
             public string StartingMessage { get; set; } = "";
+            public string? WebhookUrl {get; set; } = "";
             public bool DevMode { get; set; } = false;
         }
     }

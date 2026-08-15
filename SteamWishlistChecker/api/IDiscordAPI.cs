@@ -7,4 +7,6 @@ public interface IDiscordAPI
     Task MessageDiscordUser(ulong discordId, HashSet<SteamAPI.AppBody> appBodies);
 
     Task MessageDiscordUser(ulong discordId, string message);
+
+    public String GetWebHookURL();
 }

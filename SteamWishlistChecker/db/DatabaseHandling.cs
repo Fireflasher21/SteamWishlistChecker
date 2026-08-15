@@ -162,50 +162,34 @@ namespace db
                 var price = reducedGames[appid].price;
                 var discount = reducedGames[appid].discount;
 
-                if (appDbId == null)
-                {
-                    // Insert app and subscribe
-                    var insertAppCmd = conn.CreateCommand();
-                    insertAppCmd.CommandText = @"INSERT INTO TrackedApps (App_STEAM_ID, LowestPrice, MaxDiscountPercent, Timestamp)
+                var appCMD = conn.CreateCommand();
+                if(appDbId == null) appCMD.CommandText = @"INSERT INTO TrackedApps (App_STEAM_ID, LowestPrice, MaxDiscountPercent, Timestamp)
                                             VALUES ($aid, $price, $discount,$timestamp);
                                             SELECT last_insert_rowid();";
-                    insertAppCmd.Parameters.AddWithValue("$aid", appid);
-                    insertAppCmd.Parameters.AddWithValue("$price", price);
-                    insertAppCmd.Parameters.AddWithValue("$discount", discount);
-                    insertAppCmd.Parameters.AddWithValue("$timestamp", timestamp.ToString("yyyyMMdd"));
-                    appDbId = Convert.ToInt32(await insertAppCmd.ExecuteScalarAsync());
+                else appCMD.CommandText = @"UPDATE TrackedApps SET LowestPrice = $price, MaxDiscountPercent = $discount, Timestamp = $timestamp WHERE App_ID = $aid";
+                appCMD.Parameters.AddWithValue("$price", price);
+                appCMD.Parameters.AddWithValue("$discount", discount);
+                appCMD.Parameters.AddWithValue("$timestamp", timestamp.ToString("yyyyMMdd"));
+                appCMD.Parameters.AddWithValue("$aid", appDbId);
 
-                    //insert into return Dictionary
-                    maxReducedGames.Add(appid, new(appid, name, price, discount));
-                }
-                else if (price <= storedPrice)
+                //insert into return Dictionary
+                maxReducedGames.Add(appid, new(appid, name, price, discount));
+            
+                if (price == storedPrice)
                 {
-                    var updateCmd = conn.CreateCommand();
-                    updateCmd.CommandText = @"UPDATE TrackedApps SET LowestPrice = $price, MaxDiscountPercent = $discount, Timestamp = $timestamp WHERE App_ID = $aid";
-                    updateCmd.Parameters.AddWithValue("$price", price);
-                    updateCmd.Parameters.AddWithValue("$discount", discount);
-                    updateCmd.Parameters.AddWithValue("$timestamp", timestamp.ToString("yyyyMMdd"));
-                    updateCmd.Parameters.AddWithValue("$aid", appDbId);
-                    await updateCmd.ExecuteNonQueryAsync();
-
-                    //insert into return Dictionary
-                    maxReducedGames.Add(appid, new(appid, name, price, discount));
-
-
-                    if (price == storedPrice)
+                    //to avoid spamming when price is the same as already stored, we check if the sale has ended
+                    // == 0 (same day) set bool
+                    // > 0 (in future) sale is ongoing, set bool
+                    // < 0 (passed) new sale, skip
+                    var sale_end = DateOnly.ParseExact(storedTimestamp.ToString(), "yyyyMMdd").AddDays(21);
+                    if (sale_end.CompareTo(timestamp) >= 0)
                     {
-                        //to avoid spamming when price is the same as already stored, we check if the sale has ended
-                        // == 0 (same day) set bool
-                        // > 0 (in future) sale is ongoing, set bool
-                        // < 0 (passed) new sale, skip
-                        var sale_end = DateOnly.ParseExact(storedTimestamp.ToString(), "yyyyMMdd").AddDays(21);
-                        if (sale_end.CompareTo(timestamp) >= 0)
-                        {
-                            //insert into return Dictionary
-                            maxReducedGames[appid].SetAlreadyReduced(true);
-                        }
+                        //insert into return Dictionary
+                        maxReducedGames[appid].SetAlreadyReduced(true);
                     }
+                    else await appCMD.ExecuteNonQueryAsync();
                 }
+
             }
 
             await conn.CloseAsync();

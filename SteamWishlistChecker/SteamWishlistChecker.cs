@@ -10,6 +10,7 @@ using AppID = System.Int32;
 using SteamID = System.Int64;
 using System.Globalization;
 using api;
+using Discord;
 
 
 namespace main
@@ -132,9 +133,8 @@ namespace main
             }
             
             string webHook = _discordAPI.GetWebHookURL();
-            if(webHook != "") foreach (var game in reducedGames)
+            if(webHook != "") foreach (var body in reducedGames.Select(k => k.Value).Where(game => !game.alreadyReduced))
             {
-                var body = game.Value;
                 await DiscordWebhook.SendMessage(webHook,$"📉 **{body.name}** hat einen Tiefpreis: **{body.price / 100.0:F2}€** (-{body.discount}%)!\nhttps://store.steampowered.com/app/{body.appID}/");
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }

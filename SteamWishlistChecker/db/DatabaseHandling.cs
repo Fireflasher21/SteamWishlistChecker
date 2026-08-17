@@ -8,6 +8,7 @@ using AppID = System.Int32;
 using SteamID = System.Int64;
 using System.ComponentModel;
 using System.Collections.Specialized;
+using Discord;
 
 namespace db
 {
@@ -130,73 +131,146 @@ namespace db
 
         public static async Task<Dictionary<AppID, SteamAPI.AppBody>> AddGamesToDB(Dictionary<AppID, SteamAPI.AppBody> reducedGames)
         {
-            if (reducedGames.Count <= 0) return reducedGames;
+            if (reducedGames.Count == 0) return reducedGames;
 
             using var conn = new SqliteConnection(_dbPath);
             await conn.OpenAsync();
 
-            Dictionary<AppID, SteamAPI.AppBody> maxReducedGames = new();
-            foreach (AppID appid in reducedGames.Keys)
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            var todayInt = int.Parse(today.ToString("yyyyMMdd"));
+
+            // Select games only from database which match the games in reducedGameslist
+            var appIds = reducedGames.Keys.ToArray();            
+            var trackedGames = new Dictionary<AppID, TrackedGame>();
+
+            // Check SQLite has parameter limit.
+            const int batchSize = 500;
+
+            for (int offset = 0; offset < appIds.Length; offset += batchSize)
             {
-                // Get App_ID if exists
-                var selectAppIdCmd = conn.CreateCommand();
-                selectAppIdCmd.CommandText = "SELECT App_ID, LowestPrice, Timestamp FROM TrackedApps WHERE App_STEAM_ID = $aid";
-                selectAppIdCmd.Parameters.AddWithValue("$aid", appid);
-                using var reader = await selectAppIdCmd.ExecuteReaderAsync();
+                var batch = appIds
+                    .Skip(offset)
+                    .Take(batchSize)
+                    .ToArray();
 
-                int? appDbId = null;
-                int storedPrice = 0;
-                int storedTimestamp = 0;
+                // using to avoid CloseCon at the end
+                using var selectCmd = conn.CreateCommand();
 
-                if (await reader.ReadAsync())
+
+                var parameters = new string[batch.Length];
+
+                // using parameter array to add appIDs as identifier later on
+                for (int i = 0; i < batch.Length; i++)
                 {
-                    appDbId = reader.GetInt32(0);
-                    storedPrice = reader.GetInt16(1);
-                    storedTimestamp = reader.GetInt32(2);
+                    var parameterName = $"$id{i}";
+
+                    parameters[i] = parameterName;
+                    selectCmd.Parameters.AddWithValue(parameterName, batch[i]);
                 }
-                await reader.CloseAsync();
 
-                var timestamp = DateOnly.FromDateTime(DateTime.Now);
+                // create SQL command for all appIDs to only select games in list
+                selectCmd.CommandText = $"""
+                    SELECT App_STEAM_ID, App_ID, LowestPrice, Timestamp
+                    FROM TrackedApps
+                    WHERE App_STEAM_ID IN ({string.Join(", ", parameters)})
+                    """;
 
-                var name = reducedGames[appid].name;
-                var price = reducedGames[appid].price;
-                var discount = reducedGames[appid].discount;
+                using var reader = await selectCmd.ExecuteReaderAsync();
 
-                var appCMD = conn.CreateCommand();
-                if(appDbId == null) appCMD.CommandText = @"INSERT INTO TrackedApps (App_STEAM_ID, LowestPrice, MaxDiscountPercent, Timestamp)
-                                            VALUES ($aid, $price, $discount,$timestamp);
-                                            SELECT last_insert_rowid();";
-                else appCMD.CommandText = @"UPDATE TrackedApps SET LowestPrice = $price, MaxDiscountPercent = $discount, Timestamp = $timestamp WHERE App_ID = $aid";
-                appCMD.Parameters.AddWithValue("$price", price);
-                appCMD.Parameters.AddWithValue("$discount", discount);
-                appCMD.Parameters.AddWithValue("$timestamp", timestamp.ToString("yyyyMMdd"));
-                appCMD.Parameters.AddWithValue("$aid", appDbId);
-
-                //insert into return Dictionary
-                maxReducedGames.Add(appid, new(appid, name, price, discount));
-            
-                if (price == storedPrice)
+                // read all querys to games in Database
+                while (await reader.ReadAsync())
                 {
-                    //to avoid spamming when price is the same as already stored, we check if the sale has ended
-                    // == 0 (same day) set bool
-                    // > 0 (in future) sale is ongoing, set bool and skip
-                    // < 0 (passed) new sale, update Database
-                    var sale_end = DateOnly.ParseExact(storedTimestamp.ToString(), "yyyyMMdd").AddDays(21);
-                    if (sale_end.CompareTo(timestamp) >= 0)
-                    {
-                        //insert into return Dictionary
-                        maxReducedGames[appid].SetAlreadyReduced(true);
-                        continue;
-                    }
-                }
-                
-                await appCMD.ExecuteNonQueryAsync();
-                
+                    var steamId = reader.GetInt32(0);
+                    var dbId = reader.GetInt32(1);
+                    var storedPrice = reader.GetInt32(2);
+                    var storedTimestamp = reader.GetInt32(3);
 
+                    trackedGames[steamId] = new TrackedGame(
+                        dbId,
+                        storedPrice,
+                        storedTimestamp
+                    );
+                }
             }
 
-            await conn.CloseAsync();
-            return maxReducedGames;
+
+            using var transaction = conn.BeginTransaction();
+
+            try
+            {
+                using var upsertCmd = conn.CreateCommand();
+
+                upsertCmd.Transaction = transaction;
+
+                upsertCmd.CommandText = """
+                    INSERT INTO TrackedApps
+                        (App_STEAM_ID, LowestPrice, MaxDiscountPercent, Timestamp)
+                    VALUES
+                        ($steamId, $price, $discount, $timestamp)
+
+                    ON CONFLICT(App_STEAM_ID)
+                    DO UPDATE SET
+                        LowestPrice = excluded.LowestPrice,
+                        MaxDiscountPercent = excluded.MaxDiscountPercent,
+                        Timestamp = excluded.Timestamp;
+                    """;
+
+                upsertCmd.Parameters.Add("$steamId", SqliteType.Integer);
+                upsertCmd.Parameters.Add("$price", SqliteType.Integer);
+                upsertCmd.Parameters.Add("$discount", SqliteType.Integer);
+                upsertCmd.Parameters.Add("$timestamp", SqliteType.Integer);
+
+                var maxReducedGames = new Dictionary<AppID, SteamAPI.AppBody>();
+
+                foreach (var (appid, game) in reducedGames)
+                {
+                    bool exists = trackedGames.TryGetValue(appid, out var stored);
+
+                    // skip if price is higher than db price
+                    if (exists && game.price > stored.Price)
+                        continue;
+
+
+                    if (exists && game.price == stored.Price)
+                    {
+                        // add timestamp for date of sale end of last stored timestamp
+                        var saleEnd = DateOnly.ParseExact(stored.Timestamp.ToString(),"yyyyMMdd").AddDays(21);
+
+                        var maxReducedGame = new SteamAPI.AppBody(appid,game.name,game.price,game.discount);
+
+                        maxReducedGames.Add(appid, maxReducedGame);
+
+                        // if last sale is still ongoing (saleEnd is after, or today), set bool and skip db entry
+                        if (saleEnd >= today)
+                        {
+                            maxReducedGame.SetAlreadyReduced(true);
+                            continue;
+                        }
+                    }
+                    // price is lower or new game
+                    else if (!exists || game.price < stored.Price)
+                    {
+                        maxReducedGames[appid] = new SteamAPI.AppBody(appid,game.name,game.price,game.discount);
+                    }
+
+                    // due to upsert, insert or update db entry
+                    upsertCmd.Parameters["$steamId"].Value = appid;
+                    upsertCmd.Parameters["$price"].Value = game.price;
+                    upsertCmd.Parameters["$discount"].Value = game.discount;
+                    upsertCmd.Parameters["$timestamp"].Value = todayInt;
+
+                    await upsertCmd.ExecuteNonQueryAsync();
+                }
+
+                await transaction.CommitAsync();
+
+                return maxReducedGames;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public static async Task<List<AppID>> getAllTrackedGameIDs()
@@ -214,6 +288,12 @@ namespace db
             await conn.CloseAsync();
             return appIDList;
         }
+
+        private record TrackedGame(
+            int DbId,
+            int Price,
+            int Timestamp
+        );
 
     }
 }

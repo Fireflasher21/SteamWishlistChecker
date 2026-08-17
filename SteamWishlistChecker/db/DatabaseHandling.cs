@@ -179,16 +179,19 @@ namespace db
                 {
                     //to avoid spamming when price is the same as already stored, we check if the sale has ended
                     // == 0 (same day) set bool
-                    // > 0 (in future) sale is ongoing, set bool
-                    // < 0 (passed) new sale, skip
+                    // > 0 (in future) sale is ongoing, set bool and skip
+                    // < 0 (passed) new sale, update Database
                     var sale_end = DateOnly.ParseExact(storedTimestamp.ToString(), "yyyyMMdd").AddDays(21);
                     if (sale_end.CompareTo(timestamp) >= 0)
                     {
                         //insert into return Dictionary
                         maxReducedGames[appid].SetAlreadyReduced(true);
+                        continue;
                     }
-                    else await appCMD.ExecuteNonQueryAsync();
                 }
+                
+                await appCMD.ExecuteNonQueryAsync();
+                
 
             }
 

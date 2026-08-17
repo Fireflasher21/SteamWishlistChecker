@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 
 using SteamAPI = api.SteamAPI;
 using SteamConfig = api.models.SteamConfig;
+using BotConfig = api.models.BotConfig;
 using DiscordAPI = api.DiscordAPI;
 using DiscordConfig = api.models.DiscordConfig;
 using UserID = System.Int16;
@@ -10,7 +11,6 @@ using AppID = System.Int32;
 using SteamID = System.Int64;
 using System.Globalization;
 using api;
-using Discord;
 
 
 namespace main
@@ -21,9 +21,11 @@ namespace main
         public static List<SteamID> errorOnWishlist = new();
         private readonly IDiscordAPI _discordAPI;
         private readonly ISteamAPI _steamAPI;
+        private readonly BotConfig _config;
 
-        public SteamWishlistChecker(ISteamAPI isteamAPI, IDiscordAPI idiscordAPI)
+        public SteamWishlistChecker(BotConfig config, ISteamAPI isteamAPI, IDiscordAPI idiscordAPI)
         {
+            _config = config;
             _steamAPI = isteamAPI;
             _discordAPI = idiscordAPI;
         }
@@ -37,18 +39,14 @@ namespace main
                 .Build();
 
 
-            var steamAPI = new SteamAPI(
-                config.GetSection("Steam").Get<SteamConfig>()!);
+            var steamAPI = new SteamAPI(config.GetSection("Steam").Get<SteamConfig>()!);
 
 
-            var discordAPI = new DiscordAPI(
-                config.GetSection("Discord").Get<DiscordConfig>()!);
+            var discordAPI = new DiscordAPI(config.GetSection("Discord").Get<DiscordConfig>()!);
 
+            var _config = config.GetSection("Bot").Get<BotConfig>() ?? new BotConfig();
 
-            var checker = new SteamWishlistChecker(
-                steamAPI,
-                discordAPI);
-
+            var checker = new SteamWishlistChecker(_config, steamAPI, discordAPI);
 
             await checker.Run();
         }
@@ -61,7 +59,7 @@ namespace main
 
             while (true)
             { 
-                int milliseconds_until_time = getTimeDifferenceToNextTime(TimeOnly.Parse("14:00",CultureInfo.InvariantCulture));
+                int milliseconds_until_time = getTimeDifferenceToNextTime(TimeOnly.Parse(_config.StartingTime,CultureInfo.InvariantCulture));
                 await Task.Delay(milliseconds_until_time);
 
                 await DoUpdate();
@@ -88,7 +86,7 @@ namespace main
             var maxReducedGames = await DatabaseHandling.AddGamesToDB(reducedGames);
             
             // Send Messages in at 16:00
-            TimeOnly sendMessagesAtTime = TimeOnly.Parse("16:00",CultureInfo.InvariantCulture);
+            TimeOnly sendMessagesAtTime = TimeOnly.Parse(_config.SendTime,CultureInfo.InvariantCulture);
             int milliseconds_until_time = getTimeDifferenceToNextTime(sendMessagesAtTime);
             // Wait time difference between now an 16:00
             if(milliseconds_until_time > TimeSpan.FromHours(2).TotalMilliseconds) 
@@ -159,5 +157,15 @@ namespace main
             
             return (int) (starting_time.ToTimeSpan().TotalMilliseconds - time_Today.TotalMilliseconds);
         }
+    }
+
+}
+
+namespace api.models
+{
+    public class BotConfig
+    {
+        public string StartingTime { get; set; } = "14:00";
+        public string SendTime { get; set; } = "16:00";
     }
 }

@@ -130,12 +130,16 @@ namespace main
                 await _discordAPI.MessageDiscordUser(DatabaseHandling.discord_steam_id_List[user_id].Item2, reducedGameInfoListOfUser);
             }
             
-            string webHook = _discordAPI.GetWebHookURL();
-            if(webHook != "") foreach (var body in reducedGames.Select(k => k.Value).Where(game => !game.alreadyReduced))
-            {
-                await DiscordWebhook.SendMessage(webHook,$"📉 **{body.name}** hat einen Tiefpreis: **{body.price / 100.0:F2}€** (-{body.discount}%)!\nhttps://store.steampowered.com/app/{body.appID}/");
-                await Task.Delay(TimeSpan.FromSeconds(1));
-            }
+            string[] webHooks = _discordAPI.GetWebHookURLs();
+            if(webHooks.Length > 0) 
+                foreach(string webHook in webHooks)
+                {
+                    foreach (var body in reducedGames.Select(k => k.Value).Where(game => !game.alreadyReduced))
+                    {
+                        await DiscordWebhook.SendMessage(webHook,$"📉 **{body.name}** hat einen Tiefpreis: **{body.price / 100.0:F2}€** (-{body.discount}%)!\nhttps://store.steampowered.com/app/{body.appID}/");
+                        await Task.Delay(500);
+                    }
+                }
 
 
             _steamAPI.ClearCache();

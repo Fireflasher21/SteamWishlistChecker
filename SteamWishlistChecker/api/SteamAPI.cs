@@ -101,7 +101,7 @@ namespace api
 
             // Add all Tracked Games so far (including the not active Wishlist Games)
             var allTrackedGames = await DatabaseHandling.getAllTrackedGameIDs();
-            allTrackedGames.ForEach(id =>{if(!AppID_UserID_List.ContainsKey(id)) AppID_UserID_List.Add(id,new()); });
+            allTrackedGames.ForEach(id =>AppID_UserID_List.TryAdd(id, new()));
 
             await CheckPricesOfAppIDs();
             return true;

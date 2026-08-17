@@ -8,5 +8,5 @@ public interface IDiscordAPI
 
     Task MessageDiscordUser(ulong discordId, string message);
 
-    public String GetWebHookURL();
+    public string[] GetWebHookURLs();
 }

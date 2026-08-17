@@ -32,16 +32,20 @@ namespace api
             _client.Ready += OnReadyAsync;
 
             if (config.DevMode)
-                _client.Log += msg => { Console.WriteLine(msg); return Task.CompletedTask; };
+                _client.Log += msg => 
+                { 
+                    if (msg.Source == "Gateway" && msg.Message.Contains("Heartbeat") || msg.Message.Contains("Latency")) return Task.CompletedTask;
+                    Console.WriteLine(msg); return Task.CompletedTask; 
+                };
         }
 
         // ── Lifecycle ────────────────────────────────────────────────────────────
 
         public async Task Start()
         {
+            _webhookEventListener.Start();
             await _client.LoginAsync(TokenType.Bot, _config.BotToken);
             await _client.StartAsync();
-            _webhookEventListener.Start();
         }
 
         // ── Event handlers ───────────────────────────────────────────────────────

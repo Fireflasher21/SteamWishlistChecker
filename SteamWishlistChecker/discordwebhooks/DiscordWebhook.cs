@@ -23,6 +23,11 @@ public class DiscordWebhook
             "application/json"
         );
 
-        await httpClient.PostAsync(webhookUrl, content);
+        using var response = await httpClient.PostAsync(webhookUrl, content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Webhook couldnt not sent: " + response.StatusCode);
+        }
     }
 }

@@ -31,7 +31,7 @@ namespace db
             cmd.CommandText = @"
                                 CREATE TABLE IF NOT EXISTS Users (
                                 User_ID INTEGER PRIMARY KEY,
-                                Steam_ID INTEGER NOT NULL,
+                                Steam_ID INTEGER NOT NULL UNIQUE,
                                 Discord_Id INTEGER UNIQUE NOT NULL
                             );
 

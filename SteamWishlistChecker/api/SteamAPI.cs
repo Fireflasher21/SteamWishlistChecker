@@ -43,7 +43,7 @@ namespace api
             Console.WriteLine("Starte Wunschlisten update um: " + DateTime.Now.ToString("dd-MM-yyyy HH:mm"));
             try
             {
-                var httpClient = new HttpClient();
+                using var httpClient = new HttpClient();
 
                 foreach (var idTuple in user_steam_ids)
                 {
@@ -91,7 +91,6 @@ namespace api
 
                     }
                 }
-                httpClient.Dispose();
             }
             catch
             {

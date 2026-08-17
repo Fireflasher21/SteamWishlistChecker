@@ -78,7 +78,7 @@ namespace main
 
         private async Task CheckGamePrices()
         {
-            Console.WriteLine("Starte Check für reduzierte Spiele um " + DateTime.Now.ToString("dd-MM-yyyy HH:mm"));
+            Console.WriteLine("Check für reduzierte Spiele beendet um " + DateTime.Now.ToString("dd-MM-yyyy HH:mm"));
             //Get all games, which are reduced
             Dictionary<AppID, SteamAPI.AppBody> reducedGames = _steamAPI.AppBodyCache
                                                                         .Where(k => k.Value.discount > 0)
@@ -131,18 +131,25 @@ namespace main
             }
             
             string[] webHooks = _discordAPI.GetWebHookURLs();
-            if(webHooks.Length > 0) 
-                foreach (var body in reducedGames.Select(k => k.Value).Where(game => !game.alreadyReduced))
+
+            foreach (var body in reducedGames.Values.Where(game => !game.alreadyReduced))
+            {
+                string message =
+                    $"📉 **{body.name}** hat einen Tiefpreis: " +
+                    $"**{body.price / 100.0:F2}€** (-{body.discount}%)!\n" +
+                    $"https://store.steampowered.com/app/{body.appID}/";
+
+                try
                 {
-
-                    string message = $"📉 **{body.name}** hat einen Tiefpreis: **{body.price / 100.0:F2}€** (-{body.discount}%)!\nhttps://store.steampowered.com/app/{body.appID}/";
-
-                    var sendMessagesToWebhooks = webHooks.Select(webhook => DiscordWebhook.SendMessage(webhook,message));
-
-                    await Task.WhenAll(sendMessagesToWebhooks);
-                    await Task.Delay(500);
+                    await Task.WhenAll(webHooks.Select(webhook => DiscordWebhook.SendMessage(webhook, message)));
                 }
-                
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Webhook] Error: {ex}");
+                }
+
+                await Task.Delay(500);
+            }
 
 
             _steamAPI.ClearCache();

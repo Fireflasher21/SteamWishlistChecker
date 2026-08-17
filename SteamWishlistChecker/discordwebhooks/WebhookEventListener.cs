@@ -22,21 +22,22 @@ namespace discord.webhook
 
         // ── Lifecycle ────────────────────────────────────────────────────────────
 
-        public void Start() => Task.Run(RunAsync);
+        public void Start() => _ = RunAsync();
 
         private async Task RunAsync()
-        {
+        {   
             using var listener = new HttpListener();
-            listener.Prefixes.Add(_config.WebhookEventUrl);
-
+            
             try
             {
+                listener.Prefixes.Add(_config.WebhookEventUrl); 
+
                 listener.Start();
                 Console.WriteLine($"[WebhookEvents] Listening on {_config.WebhookEventUrl}");
             }
-            catch (HttpListenerException ex)
+            catch (Exception ex)
             {
-                Console.WriteLine($"[WebhookEvents] Could not start listener: {ex.Message}");
+                Console.WriteLine($"[WebhookEvents] Could not start listener: {ex}");
                 return;
             }
 
@@ -46,14 +47,15 @@ namespace discord.webhook
                 try
                 {
                     ctx = await listener.GetContextAsync();
+
+                    _ = HandleRequestAsync(ctx);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[WebhookEvents] Accept error: {ex.Message}");
-                    continue;
                 }
 
-                await Task.Run(() => HandleRequestAsync(ctx));
+
             }
         }
 

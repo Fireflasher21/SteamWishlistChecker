@@ -9,21 +9,24 @@ using AppID = System.Int32;
 using UserID = System.Int16;
 using SteamID = System.Int64;
 using System.Globalization;
+using api.models;
 
 namespace SteamWishlistChecker.Tests;
 
-public class SteamWishlistCheckerTests
+public partial class SteamWishlistCheckerTests
 {
     private readonly ISteamAPI _steamAPI;
     private readonly IDiscordAPI _discordAPI;
+    private readonly BotConfig _config;
     private readonly SteamWishlistCheckerMain _checker;
 
     public SteamWishlistCheckerTests()
     {
         _steamAPI = Substitute.For<ISteamAPI>();
         _discordAPI = Substitute.For<IDiscordAPI>();
+        _config = Substitute.For<BotConfig>();
 
-        _checker = new SteamWishlistCheckerMain(
+        _checker = new SteamWishlistCheckerMain(_config,
             _steamAPI,
             _discordAPI);
     }
@@ -40,16 +43,21 @@ public class SteamWishlistCheckerTests
     public void GetTimeDifferenceToNextTime_ReturnsPositiveValue()
     {
         // Arrange
-        TimeOnly targetTime = TimeOnly.Parse("14:00",CultureInfo.InvariantCulture);
+        TimeOnly targetTime = TimeOnly.FromDateTime(
+            DateTime.Now.AddMinutes(10)
+        );
 
         // Act
         int result =
             SteamWishlistCheckerMain.getTimeDifferenceToNextTime(targetTime);
 
         // Assert
-        // 5 Millisecond timespace for test
-        Console.WriteLine(targetTime);
-        Assert.True(result >= (TimeSpan.FromMinutes(10).TotalMilliseconds - 5) && result <= TimeSpan.FromMinutes(10).TotalMilliseconds);
+        Assert.True(result > 0);
+        Assert.InRange(
+            result,
+            (int)TimeSpan.FromMinutes(9).TotalMilliseconds,
+            (int)TimeSpan.FromMinutes(11).TotalMilliseconds
+        );
     }
 
 

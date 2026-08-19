@@ -57,6 +57,7 @@ namespace main
             await DatabaseHandling.InitDatabase();
             await _discordAPI.Start();
 
+            Console.WriteLine("[Webhook] Config loaded " + _discordAPI.GetWebHookURLs().Length + " URLs");
             while (true)
             { 
                 int milliseconds_until_time = getTimeDifferenceToNextTime(TimeOnly.Parse(_config.StartingTime,CultureInfo.InvariantCulture));
@@ -98,7 +99,9 @@ namespace main
         }
 
         private async Task MessageDiscordUser(Dictionary<AppID, SteamAPI.AppBody> reducedGames)
-        {
+        {   
+            Task runWebhooksAsync = SendWebhooks(_discordAPI.GetWebHookURLs(),reducedGames);
+
             if (_steamAPI.AppIDUserIds.Count <= 0) return;
 
             //Foreach user
@@ -130,8 +133,18 @@ namespace main
                 await _discordAPI.MessageDiscordUser(DatabaseHandling.discord_steam_id_List[user_id].Item2, reducedGameInfoListOfUser);
             }
             
-            string[] webHooks = _discordAPI.GetWebHookURLs();
+            
+            // if Webhooks need longer, wait before clearing
+            await runWebhooksAsync;
 
+            _steamAPI.ClearCache();
+            errorOnWishlist.Clear();
+        }
+
+        private async Task SendWebhooks(string[] webHooks,Dictionary<AppID, SteamAPI.AppBody> reducedGames )
+        {
+
+            
             foreach (var body in reducedGames.Values.Where(game => !game.alreadyReduced))
             {
                 string message =
@@ -150,10 +163,6 @@ namespace main
 
                 await Task.Delay(500);
             }
-
-
-            _steamAPI.ClearCache();
-            errorOnWishlist.Clear();
         }
 
 

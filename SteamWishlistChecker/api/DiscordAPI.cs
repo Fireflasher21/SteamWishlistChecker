@@ -10,12 +10,14 @@ namespace api
     {
         private readonly DiscordSocketClient _client;
         private readonly DiscordConfig _config;
+        private readonly string _botToken;
         private readonly CommandRegistration _commands;
         private readonly WebhookEventListener _webhookEventListener;
 
-        public DiscordAPI(DiscordConfig config)
+        public DiscordAPI(DiscordConfig config, string botToken)
         {
             _config = config;
+            _botToken = botToken;
 
             _client = new DiscordSocketClient(new DiscordSocketConfig
             {
@@ -37,6 +39,7 @@ namespace api
                     if (msg.Source == "Gateway" && msg.Message.Contains("Heartbeat") || msg.Message.Contains("Latency")) return Task.CompletedTask;
                     Console.WriteLine(msg); return Task.CompletedTask; 
                 };
+                
         }
 
         // ── Lifecycle ────────────────────────────────────────────────────────────
@@ -44,7 +47,7 @@ namespace api
         public async Task Start()
         {
             _webhookEventListener.Start();
-            await _client.LoginAsync(TokenType.Bot, _config.BotToken);
+            await _client.LoginAsync(TokenType.Bot, _botToken);
             await _client.StartAsync();
         }
 
@@ -107,7 +110,6 @@ namespace api
     {
         public class DiscordConfig
         {
-            public string BotToken        { get; set; } = "";
             public string ApplicationId   { get; set; } = "";
 
             public string PublicKey       { get; set; } = "";

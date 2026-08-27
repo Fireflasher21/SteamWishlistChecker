@@ -6,6 +6,7 @@ This project is also not an official Software from Steam.
 
 # SteamWishlistChecker
 This Discord Bot uses the Steam Web API to check for the stated SteamID's related Account Wishlist and sends notification via direct Messages when a game or app on said wishlist has the highest discount since start of this service.
+And Webhook Urls can be set which will receive messages containing all reduced Games.
 
 I build this since SteamDB does not have an API and wanted to save some time on checking games prices.
 
@@ -41,15 +42,20 @@ I build this since SteamDB does not have an API and wanted to save some time on 
 - Once u removed your SteamID via the Discord Bot command, your data is permanently erased
 
 ### Template appsettings.json
+All Configs can also be stated as Enviromental Variables f.e. "Bot__Token" for "Bot":"Token" 
 ```
 {
+  "Bot": {
+    "Token": "Your Bot Token",
+    "StartingTime":"Your Time to Start price Updates in HH:mm", 
+    "SendTime":"Your Time to send the actual messages in HH:mm" 
+  }
   "Discord": {
-    "BotToken": "Your Bot Token",
-    "ClientId": "Client ID for oAuth2",
-    "ClientSecret": "Client Secret for oAuth2",
-    "RedirectUri": "Your oAuth2 Authentication RedirectUrl",
-    "LocalServer": "Your Local oAuth2 Authentication URL",
+    "ApplicationID": "ID of your Application for WebhookInteractions",
+    "PublicKey": "Your Bots Public Key",
+    "WebhookEventUrl": "Your local http listener address", # Must be reachable in any way from outside
     "StartingMessage": "What your starting Message should be",
+    "WebHookUrls" : [] # Ah list of Webhook Urls you want the Bot to send reduced Games to
     "DevMode": "false"
   },
   "Steam": {
@@ -57,3 +63,4 @@ I build this since SteamDB does not have an API and wanted to save some time on 
   }
 }
 ```
+

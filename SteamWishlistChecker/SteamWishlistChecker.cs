@@ -36,15 +36,15 @@ namespace main
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json")
+                .AddEnvironmentVariables()
                 .Build();
 
 
+            var _config = config.GetSection("Bot").Get<BotConfig>() ?? new BotConfig();
+
             var steamAPI = new SteamAPI(config.GetSection("Steam").Get<SteamConfig>()!);
 
-
-            var discordAPI = new DiscordAPI(config.GetSection("Discord").Get<DiscordConfig>()!);
-
-            var _config = config.GetSection("Bot").Get<BotConfig>() ?? new BotConfig();
+            var discordAPI = new DiscordAPI(config.GetSection("Discord").Get<DiscordConfig>()!, _config.Token);
 
             var checker = new SteamWishlistChecker(_config, steamAPI, discordAPI);
 
@@ -188,6 +188,7 @@ namespace api.models
 {
     public class BotConfig
     {
+        public string Token { get; set; } = "";
         public string StartingTime { get; set; } = "14:00";
         public string SendTime { get; set; } = "16:00";
     }

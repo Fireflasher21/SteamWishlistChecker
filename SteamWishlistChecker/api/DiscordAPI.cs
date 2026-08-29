@@ -96,9 +96,9 @@ namespace api
             }
         }
 
-        public string[] GetWebHookURLs()
+        public Dictionary<string,string> GetWebHookURLs()
         {
-            return _config.WebhookUrls != null ? _config.WebhookUrls : Array.Empty<string>();
+            return _config.WebhookUrls != null ? _config.WebhookUrls : new();
         }
     }
 
@@ -115,7 +115,7 @@ namespace api
             public string PublicKey       { get; set; } = "";
 
             public string WebhookEventUrl { get; set; } = "http://+:5555/webhook/";
-            public string[]? WebhookUrls { get; set; } = Array.Empty<string>();
+            public Dictionary<string,string>? WebhookUrls { get; set; } = new();
 
             public string StartingMessage { get; set; } = "";
             public bool   DevMode         { get; set; } = false;

@@ -11,6 +11,7 @@ using AppID = System.Int32;
 using SteamID = System.Int64;
 using System.Globalization;
 using api;
+using Microsoft.Extensions.Primitives;
 
 
 namespace main
@@ -35,10 +36,14 @@ namespace main
         {
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables()
                 .Build();
 
+            ChangeToken.OnChange(
+                () => config.GetReloadToken(),
+                () => Console.WriteLine("[Bot] appsettings reloaded " + DateTime.Now.ToString())
+            );
 
             var _config = config.GetSection("Bot").Get<BotConfig>() ?? new BotConfig();
 
@@ -57,7 +62,7 @@ namespace main
             await DatabaseHandling.InitDatabase();
             await _discordAPI.Start();
 
-            Console.WriteLine("[Webhook] Config loaded " + _discordAPI.GetWebHookURLs().Length + " URLs");
+            Console.WriteLine("[Webhook] Config loaded " + _discordAPI.GetWebHookURLs().Capacity + " URLs");
             while (true)
             { 
                 int milliseconds_until_time = getTimeDifferenceToNextTime(TimeOnly.Parse(_config.StartingTime,CultureInfo.InvariantCulture));
@@ -79,7 +84,7 @@ namespace main
 
         private async Task CheckGamePrices()
         {
-            Console.WriteLine("Check für reduzierte Spiele beendet um " + DateTime.Now.ToString("dd-MM-yyyy HH:mm"));
+            Console.WriteLine("[Bot] Check für reduzierte Spiele beendet um " + DateTime.Now.ToString("dd-MM-yyyy HH:mm"));
             //Get all games, which are reduced
             Dictionary<AppID, SteamAPI.AppBody> reducedGames = _steamAPI.AppBodyCache
                                                                         .Where(k => k.Value.discount > 0)
@@ -91,7 +96,7 @@ namespace main
             int milliseconds_until_time = getTimeDifferenceToNextTime(sendMessagesAtTime);
             // Wait time difference between now an 16:00
             if(milliseconds_until_time > TimeSpan.FromHours(2).TotalMilliseconds) 
-                Console.WriteLine("Checking Game Prices took longer than 2h, pls reduce time for checks or increase dedicated Checks");
+                Console.WriteLine("[Bot] Checking Game Prices took longer than 2h, pls reduce time for checks or increase dedicated Checks");
             else await Task.Delay(milliseconds_until_time);
             
             // Send Messages to users
@@ -100,7 +105,7 @@ namespace main
 
         private async Task MessageDiscordUser(Dictionary<AppID, SteamAPI.AppBody> reducedGames)
         {   
-            Task runWebhooksAsync = SendWebhooks(_discordAPI.GetWebHookURLs(),reducedGames);
+            Task runWebhooksAsync = SendWebhooks(_discordAPI.GetWebHookURLs().Values.ToArray(),reducedGames);
 
             if (_steamAPI.AppIDUserIds.Count <= 0) return;
 

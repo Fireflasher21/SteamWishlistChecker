@@ -40,7 +40,7 @@ namespace api
         public async Task<bool> LoadWishlistOfSteamIDs(HashSet<(UserID,SteamID)> user_steam_ids)
         {
 
-            Console.WriteLine("Starte Wunschlisten update um: " + DateTime.Now.ToString("dd-MM-yyyy HH:mm"));
+            Console.WriteLine("[SteamAPI] Starte Wunschlisten update um: " + DateTime.Now.ToString("dd-MM-yyyy HH:mm"));
             try
             {
                 using var httpClient = new HttpClient();
@@ -108,7 +108,7 @@ namespace api
 
         public async Task CheckPricesOfAppIDs()
         {
-            Console.WriteLine("Starte Spielpreis update");
+            Console.WriteLine("[SteamAPI] Spielpreis update startet");
             var httpClient = new HttpClient();
             foreach (AppID AppID in AppID_UserID_List.Keys)
             {

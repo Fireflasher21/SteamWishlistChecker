@@ -92,13 +92,14 @@ namespace main
                                                                         .ToDictionary();
             var maxReducedGames = await DatabaseHandling.AddGamesToDB(reducedGames);
             
+            int timeDifferenceInMinutes = (int)  (TimeOnly.Parse(_config.SendTime).ToTimeSpan().TotalMinutes - TimeOnly.Parse(_config.StartingTime).ToTimeSpan().TotalMinutes);
+            TimeSpan timeSpanFromMinutes = TimeSpan.FromMinutes(timeDifferenceInMinutes);
+
             TimeOnly sendMessagesAtTime = TimeOnly.Parse(_config.SendTime,CultureInfo.InvariantCulture);
             int milliseconds_until_time = getTimeDifferenceToNextTime(sendMessagesAtTime);
-            // Wait time difference between now an 16:00
-            int timeDifferenceInMinutes =  TimeOnly.Parse(_config.SendTime).Minute - TimeOnly.Parse(_config.StartingTime).Minute;
-            TimeSpan timeSpanFromMinutes = TimeSpan.FromMinutes(timeDifferenceInMinutes);
+
             if(milliseconds_until_time >= timeSpanFromMinutes.Milliseconds) 
-                Console.WriteLine("[Bot] Checking Game Prices took longer than " + timeDifferenceInMinutes/60 + ":" + timeDifferenceInMinutes%60 + "\nIncrease Timespan" );
+                Console.WriteLine("[Bot] Checking Game Prices took longer than " + timeDifferenceInMinutes/60 + ":" + timeDifferenceInMinutes%60 + "\nIncrease Timespan!" );
             else await Task.Delay(milliseconds_until_time);
             
             // Send Messages to users

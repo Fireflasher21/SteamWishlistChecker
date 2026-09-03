@@ -12,6 +12,7 @@ using SteamID = System.Int64;
 using System.Globalization;
 using api;
 using Microsoft.Extensions.Primitives;
+using System.ComponentModel.DataAnnotations;
 
 
 namespace main
@@ -91,12 +92,13 @@ namespace main
                                                                         .ToDictionary();
             var maxReducedGames = await DatabaseHandling.AddGamesToDB(reducedGames);
             
-            // Send Messages in at 16:00
             TimeOnly sendMessagesAtTime = TimeOnly.Parse(_config.SendTime,CultureInfo.InvariantCulture);
             int milliseconds_until_time = getTimeDifferenceToNextTime(sendMessagesAtTime);
             // Wait time difference between now an 16:00
-            if(milliseconds_until_time > TimeSpan.FromHours(2).TotalMilliseconds) 
-                Console.WriteLine("[Bot] Checking Game Prices took longer than 2h, pls reduce time for checks or increase dedicated Checks");
+            int timeDifferenceInMinutes =  TimeOnly.Parse(_config.SendTime).Minute - TimeOnly.Parse(_config.StartingTime).Minute;
+            TimeSpan timeSpanFromMinutes = TimeSpan.FromMinutes(timeDifferenceInMinutes);
+            if(milliseconds_until_time >= timeSpanFromMinutes.Milliseconds) 
+                Console.WriteLine("[Bot] Checking Game Prices took longer than " + timeDifferenceInMinutes/60 + ":" + timeDifferenceInMinutes%60 + "\nIncrease Timespan" );
             else await Task.Delay(milliseconds_until_time);
             
             // Send Messages to users

@@ -24,6 +24,15 @@ namespace db
         public static async Task InitDatabase()
         {
             Directory.CreateDirectory(_dbPath_Folder);
+
+            
+            if (File.Exists(_dbPath))
+            {
+                var attributes = File.GetAttributes(_dbPath);
+
+                if (attributes.HasFlag(FileAttributes.ReadOnly))throw new UnauthorizedAccessException($"The database file is read-only: {_dbPath}");
+            }
+
             using var conn = new SqliteConnection(_dbPath);
             await conn.OpenAsync();
 

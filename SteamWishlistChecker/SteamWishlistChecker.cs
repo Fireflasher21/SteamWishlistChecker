@@ -98,8 +98,8 @@ namespace main
             TimeOnly sendMessagesAtTime = TimeOnly.Parse(_config.SendTime,CultureInfo.InvariantCulture);
             int milliseconds_until_time = getTimeDifferenceToNextTime(sendMessagesAtTime);
 
-            if(milliseconds_until_time >= timeSpanFromMinutes.Milliseconds) 
-                Console.WriteLine("[Bot] Checking Game Prices took longer than " + timeDifferenceInMinutes/60 + ":" + timeDifferenceInMinutes%60 + "\nIncrease Timespan!" );
+            if(milliseconds_until_time >= timeSpanFromMinutes.TotalMilliseconds) 
+                Console.WriteLine("[Bot] Checking Game Prices took longer than " + timeDifferenceInMinutes/60 + ":" + timeDifferenceInMinutes%60 + "h. Increase Timespan!" );
             else await Task.Delay(milliseconds_until_time);
             
             // Send Messages to users

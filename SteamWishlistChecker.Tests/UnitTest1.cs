@@ -38,6 +38,18 @@ public partial class SteamWishlistCheckerTests
         Assert.NotNull(_checker);
     }
 
+    [Fact]
+    public void TimeTest()
+    {
+        int timeDifferenceInMinutes = (int)  (TimeOnly.Parse("16:00").ToTimeSpan().TotalMinutes - TimeOnly.Parse("15:00").ToTimeSpan().TotalMinutes);
+        TimeSpan timeSpanFromMinutes = TimeSpan.FromMinutes(timeDifferenceInMinutes);
+        Assert.True(timeSpanFromMinutes.TotalMinutes == timeDifferenceInMinutes);
+
+        TimeOnly sendMessagesAtTime = TimeOnly.Parse("16:00",CultureInfo.InvariantCulture);
+        int milliseconds_until_time = SteamWishlistCheckerMain.getTimeDifferenceToNextTime(sendMessagesAtTime);
+
+        Assert.False(milliseconds_until_time >= timeSpanFromMinutes.TotalMilliseconds);
+    }
 
     [Fact]
     public void GetTimeDifferenceToNextTime_ReturnsPositiveValue()

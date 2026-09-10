@@ -7,6 +7,8 @@ using UserID = System.Int16;
 using AppID = System.Int32;
 using SteamID = System.Int64;
 using main;
+using System.Net;
+using Discord.Rest;
 
 namespace api
 {
@@ -113,7 +115,9 @@ namespace api
             foreach (AppID AppID in AppID_UserID_List.Keys)
             {
                 string url = string.Format(API_APP_URL, AppID);
-                var response = await httpClient.GetStringAsync(url);
+                var response = await GetWithRetryAsync(url, httpClient);
+                if (response == null) continue;
+
                 //Check if Body exists
                 var data = JObject.Parse(response)[AppID.ToString()];
                 if (data == null || data["success"]?.Value<bool>() != true) continue;
@@ -137,6 +141,29 @@ namespace api
                 await Task.Delay((int)TimeSpan.FromSeconds(2).TotalMilliseconds);
             }
             httpClient.Dispose();
+        }
+
+        private async Task<string?> GetWithRetryAsync(string url, HttpClient httpClient)
+        {
+            for (int attempt = 0; attempt < 6; attempt++)
+            {
+                using var response = await httpClient.GetAsync(url);
+
+                if (response.IsSuccessStatusCode) return await response.Content.ReadAsStringAsync();
+
+                if (response.StatusCode != HttpStatusCode.TooManyRequests && (int)response.StatusCode < 500)
+                {
+                    Console.WriteLine("[SteamAPI] Unknown Error Code: " + response.StatusCode + ". Quitting");
+                    return null;
+                }
+                
+                var delay = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, attempt + 1) + Random.Shared.NextDouble() * 2));
+
+                Console.WriteLine($"Steam {response.StatusCode}, retrying in {delay.TotalSeconds}s");
+                await Task.Delay(delay);
+            }
+
+            return null;
         }
 
         /// <summary>

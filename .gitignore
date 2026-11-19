@@ -60,3 +60,5 @@ nunit-*.xml
 appsettings.json
 .vscode/dockerfile
 .vscode/docker-compose.yml
+
+.continue
